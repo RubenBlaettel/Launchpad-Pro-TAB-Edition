@@ -8,6 +8,7 @@
 # Danach:   python tools/build_installer.py       (Windows-Installer, Inno Setup 7)
 #           python tools/build_linux_package.py   (Linux-Paket .tar.gz mit install.sh)
 import os
+import shutil
 import sys
 
 ROOT = os.path.abspath(os.path.join(SPECPATH, ".."))  # noqa: F821 – von PyInstaller gesetzt
@@ -72,3 +73,7 @@ coll = COLLECT(  # noqa: F821
     upx=False,
     name="LaunchpadProTAB",
 )
+
+# Lizenztexte gut sichtbar neben das Programm legen (landen so auch im Installer und im Linux-Paket)
+for _name, _target in (("LICENSE", "LICENSE.txt"), ("THIRD_PARTY_NOTICES.md", "THIRD_PARTY_NOTICES.md")):
+    shutil.copy2(os.path.join(ROOT, _name), os.path.join(DISTPATH, "LaunchpadProTAB", _target))  # noqa: F821

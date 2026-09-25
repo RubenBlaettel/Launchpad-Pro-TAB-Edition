@@ -4,6 +4,23 @@ Alle nennenswerten Änderungen an Launchpad Pro TAB Edition. Der Abschnitt einer
 beim Veröffentlichen automatisch als Versionshinweis ins GitHub-Release übernommen und im
 Update-Dialog des Programms angezeigt.
 
+## [Unveröffentlicht]
+
+### Neu
+
+- **Update-Suche nur mit Zustimmung:** Beim ersten Start fragt Launchpad Pro einmal, ob es
+  automatisch nach Updates suchen darf – vorher baut das Programm keine Verbindung ins Internet auf.
+  Änderbar unter *Einstellungen › Updates*; die Suche per Knopfdruck geht immer.
+- **Digitale Signatur (vorbereitet):** Installer, Deinstaller, Programm und mitgelieferte
+  Bibliotheken ohne Herstellersignatur werden über SignPath signiert, sobald die kostenlose
+  Open-Source-Signatur eingerichtet ist. Dann blockiert die *intelligente App-Steuerung* von
+  Windows 11 die Installation nicht mehr (Fehler 4551).
+- **Open Source:** Launchpad Pro steht unter der MIT-Lizenz; Lizenztexte liegen im Programmordner.
+
+### Verbessert
+
+- README: Datenschutzerklärung, Code-Signatur-Richtlinie und Hilfe bei „Fehler 4551“.
+
 ## [1.1.0] – 2026-09-25
 
 ### Neu

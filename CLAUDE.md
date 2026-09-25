@@ -22,7 +22,9 @@ Kommentare, Doku: **Deutsch**. Aktuelle Version: siehe `launchpad_pro_tab/__init
   Installer-Bilder: `tools/make_installer_screenshots.py`).
 - Diese **CLAUDE.md** aktuell halten, **CHANGELOG.md** bei jeder Version ergänzen.
 - Entwicklungszweig bisher: `claude/launchpad-pro-tab-frontend-pqz33o` (Remote: GitHub
-  `RubenBlaettel/Launchpad-Pro-TAB-Edition`, Standardzweig `main`). PRs nur auf ausdrücklichen Wunsch.
+  `RubenBlaettel/Launchpad-Pro-TAB-Edition`, Standardzweig `main`, Repository öffentlich).
+  PRs nur auf ausdrücklichen Wunsch. v1.1 ist über PR #1 in `main` – für Folgearbeiten den Zweig
+  zuerst auf `origin/main` setzen.
 
 ### Entscheidungen aus Rückfragen
 
@@ -32,7 +34,10 @@ Kommentare, Doku: **Deutsch**. Aktuelle Version: siehe `launchpad_pro_tab/__init
 | Antippen einer laufenden Kachel (v1.0) | **Start/Stopp-Umschalter**, mehrere Kacheln parallel, Schleife je Kachel, „ALLES STOPPEN“ |
 | Tempo-Regler (v1.0) | **Tonhöhe bleibt erhalten** (Time-Stretch, WSOLA), 0,5×–2,0×, Rastpunkt 1,0× |
 | Update-Quelle (v1.1) | Repo war privat → Nutzer macht das **Repository öffentlich**; Updates direkt aus dessen GitHub-Releases (keine Tokens). |
-| Erstes Release (v1.1) | **v1.1.0 veröffentlichen** (Tag → Release-Workflow). |
+| Erstes Release (v1.1) | **v1.1.0 veröffentlicht** (25.09.2026): Nutzer hat PR #1 nach `main` gemergt und das Release in der GitHub-Oberfläche angelegt; `release.yml` hat die Assets angehängt. |
+| Installer von Windows 11 blockiert (intelligente App-Steuerung, Fehler 4551) | **Signatur über die SignPath Foundation** (kostenlos für Open Source); Einrichtung: `docs/SIGNPATH.md`. |
+| Lizenz (Voraussetzung SignPath) | **MIT**, Rechteinhaber **TAB Theater** (`LICENSE`). |
+| Update-Suche vs. Datenschutzerklärung (SignPath) | **Beim ersten Start einmal fragen**; ohne Zustimmung keine Verbindung ins Netz. |
 
 ### Eigene Designentscheidungen (begründet, bei Bedarf mit Nutzer abstimmen)
 
@@ -55,7 +60,10 @@ Kommentare, Doku: **Deutsch**. Aktuelle Version: siehe `launchpad_pro_tab/__init
   Checkboxen (Desktop, Startmenü, Dateizuordnung `.lptab`, alle an), Wartungsseite beim erneuten
   Start („Aktualisieren/Reparieren“ oder „Deinstallieren“), Deinstaller mit Checkbox „Alle Projekte
   und Einstellungen löschen“ (aus) + danach Standard-Bestätigung (lässt sich in Inno nicht abschalten).
-- **Updates (v1.1):** Prüfung beim Start (+ alle 12 h), nie automatische Installation; Hinweis als
+- **Updates (v1.1):** Prüfung beim Start (+ alle 12 h) **nur mit Zustimmung** (`AppSettings.update_check`:
+  `None` = noch nicht gefragt → `UpdateConsentDialog` 4 s nach dem Start, nicht im Show-Modus/über
+  anderen Dialogen; Fenster ohne Antwort geschlossen → nächster Start fragt erneut; 1.1.0-Einstellung
+  `update_auto_check: false` wird als „Nein“ übernommen), nie automatische Installation; Hinweis als
   Knopf in der Kopfleiste + Toast (im Show-Modus nur Knopf). Manuelle Suche ignoriert „Übersprungen“.
   Optional Vorabversionen (Beta). Prüfsumme ist Pflicht (GitHub-`digest` oder `SHA256SUMS.txt`).
 - **Einzelinstanz (v1.1):** zweiter Start übergibt Projektpfad per `QLocalServer` an die laufende
@@ -109,6 +117,10 @@ Unter Linux gibt es keine echte Windows-EXE – für Ablauf-Tests genügt ein Pl
 (`hostname.exe` aus dem Wine-Präfix als `LaunchpadProTAB.exe`). Stille Installation/Deinstallation,
 Wartungsseite und Deinstallations-Dialog funktionieren unter Wine; `--purge-user-data` testet nur das
 CI (echte EXE). Screenshots: `WINEPREFIX=… python tools/make_installer_screenshots.py <setup.exe>`.
+Signierablauf ohne SignPath: `apt-get install osslsigncode`, Test-Zertifikat per
+`openssl req -x509 … -addext extendedKeyUsage=codeSigning`, dann `osslsigncode sign -certs … -key …
+-in a.exe -out b.exe` statt SignPath (Beispiel-Dateien von Inno sind schon signiert → für Tests mit
+`osslsigncode remove-signature` unsigniert machen).
 
 ## 3. Architektur (wo liegt was?)
 
@@ -157,18 +169,25 @@ launchpad_pro_tab/
                       BrokenProcessPool -> Thread; stop_processes() vor Updates (keine Dateisperren)
     qtutil.py         rprop()/PropertyObject._set(), to_local_path()
   qml/                Main.qml + Komponenten (flach), Theme.qml (Singleton via qmldir, Farben für
-                      BEIDE Modi), SettingsDialog (Reiter), UpdateDialog, ThemePreview, icons/*.svg
+                      BEIDE Modi), SettingsDialog (Reiter), UpdateDialog, UpdateConsentDialog
+                      (Zustimmung Update-Suche), ThemePreview, icons/*.svg
 packaging/
-  launchpad_pro_tab.spec   PyInstaller (Windows + Linux), Laufzeit-Hook pyi_rth_portaudio.py
-  windows/LaunchpadProTAB.iss  Inno Setup 7 (+ wizard-large.png/wizard-small.png aus tools/make_installer_images.py)
+  launchpad_pro_tab.spec   PyInstaller (Windows + Linux), Laufzeit-Hook pyi_rth_portaudio.py; legt
+                           LICENSE.txt + THIRD_PARTY_NOTICES.md neben die EXE
+  windows/LaunchpadProTAB.iss  Inno Setup 7 (+ wizard-large.png/wizard-small.png aus tools/make_installer_images.py);
+                           Signatur per /DSignToolName (lokal) oder /DSignedUninstallerDir (extern, 2 Durchläufe)
+  signpath/artifact-configuration.xml  SignPath-Konfiguration „windows“ (signiert *.exe/*.dll im ZIP)
   linux/install.sh, uninstall.sh  (install/--update/--uninstall, .install-info listet angelegte Dateien)
 tools/                make_screenshots.py, make_installer_screenshots.py, demo_assets.py, make_icons.py,
-                      make_icon.py, make_installer_images.py, build_installer.py, build_linux_package.py,
+                      make_icon.py, make_installer_images.py, build_installer.py (--sign-tool,
+                      --signed-uninstaller-dir; Code 3 = „erst signieren“), signing.py (sammeln/
+                      einsetzen/pruefen), test_sign.ps1 (CI-Test-Zertifikat), build_linux_package.py,
                       test_windows_installer.ps1, test_linux_package.sh, release_notes.py
 tests/                test_models, test_project, test_audio, test_settings_volume, test_ui (Touch/Maus,
-                      Theme, Update-Dialog), test_update (lokaler Fake-GitHub-Server), test_purge,
-                      test_single_instance
-.github/workflows/    build.yml (wiederverwendbar), ci.yml (jeder Push), release.yml (Tag v*)
+                      Theme, Update-Dialog, Zustimmungsfrage), test_update (lokaler Fake-GitHub-Server),
+                      test_purge, test_single_instance, test_signing (künstliche PE-Dateien)
+docs/                 images/ (README-Bilder), SIGNPATH.md (Antrag + Einrichtung der Code-Signatur)
+.github/workflows/    build.yml (wiederverwendbar, Input `sign`), ci.yml (jeder Push), release.yml (Tag v*)
 ```
 
 ### Datenfluss Kachel antippen
@@ -185,7 +204,9 @@ verwerfen veraltete Ergebnisse.
 
 ### Datenfluss Update
 
-`Backend.start(check_updates=True)` (nur aus `main()`) → `updater.start()` → 4 s später Thread:
+`Backend.start(check_updates=True)` (nur aus `main()`) → `updater.start()` → ohne Antwort auf die
+Zustimmungsfrage: 4 s später `consentPending` → QML-Timer öffnet `UpdateConsentDialog` →
+`answerConsent(bool)` (bei Ja sofort prüfen) · mit Zustimmung: 4 s später Thread:
 `fetch_releases` → `pick_update` → `updateFound` (QML: Toast + Knopf `updatePill`) →
 `startUpdate()` → Thread: `resolve_checksum` + `download` (Fortschritt per 100-ms-Timer) →
 `_install`: `prepare_hook` = `Backend.prepare_for_update()` (Audio stoppen, speichern,
@@ -199,6 +220,17 @@ Programmordner, `spawn_detached(<neu>/LaunchpadProTAB --finish-update <ordner> -
 beenden; der Hilfsprozess tauscht die Ordner und `execv`t die neue Version. Beim nächsten Start
 räumt `updater.cleanup()` Downloads und `.alt-*`-Ordner weg; `Backend._announce_version()` meldet
 „aktualisiert auf …“ (vergleicht `settings.last_version`).
+
+### Datenfluss Signatur (Release, `SIGNATUR=signpath`; CI: `test` mit Test-Zertifikat)
+
+PyInstaller → `build_installer.py --signed-uninstaller-dir build/inno-signiert` (1. Durchlauf, Code 3:
+Inno legt `uninst-<InnoVersion>-<Hash>.e64` unsigniert ab – das ist der Deinstaller **und** die
+`Setup-x.y.z.tmp`, die Setup im Temp-Ordner startet) → `signing.py sammeln` (unsignierte EXE/DLL/PYD +
+uninst-Datei → `build/zu-signieren/0001.dll …`, Zuordnung `build/signieren.json`) → Artefakt →
+SignPath-Action (Freigabe per E-Mail) → `build/signiert` → `signing.py einsetzen` → 2. Durchlauf
+(Inno übernimmt die Signatur, prüft den Inhalt) → Smoke-Test der signierten EXE → Setup.exe als
+Artefakt → SignPath (2. Freigabe) → `signing.py pruefen` + `Get-AuthenticodeSignature` (Valid) →
+Installer-E2E-Test (prüft Signatur von EXE und `unins000.exe`) → Release.
 
 ## 4. Invarianten & Regeln (nicht brechen!)
 
@@ -225,6 +257,12 @@ räumt `updater.cleanup()` Downloads und `.alt-*`-Ordner weg; `Backend._announce
   `AppMutexName`/`AppUserModelId` im .iss = `system/integration.py` (Test prüft das).
 - Update-/Installer-Parameter (`/LPTABWAITPID`, `/LPTABREADY`, `/LPTABRESTART`, `/LPTABPURGE`, `--purge-user-data`,
   `--finish-update`, `--wait-pid`) sind Schnittstellen – Änderungen immer an beiden Seiten + Tests.
+- **Datenschutz:** Das Programm baut **ohne ausdrückliche Zustimmung keine Netzverbindung** auf
+  (Update-Suche erst nach „Ja“ bzw. per Knopf). Die Datenschutzerklärung im README ist Voraussetzung
+  der SignPath-Signatur – neue Netzfunktionen immer mit Zustimmung + README-Abschnitt „Datenschutz“.
+- **Signatur:** Nur Dateien signieren, die GitHub Actions aus diesem Repository baut; Test-Zertifikat
+  (`tools/test_sign.ps1`) nie für Releases. Werden Programmdateien nach dem Signieren verändert
+  (z. B. Ressourcen), ist die Signatur kaputt – Signieren ist immer der letzte Schritt vor dem Paketieren.
 
 ## 5. Stolperfallen (bereits einmal passiert)
 
@@ -264,6 +302,9 @@ räumt `updater.cleanup()` Downloads und `.alt-*`-Ordner weg; `Backend._announce
   of Windows“).
 - PowerShell: `Start-Process … -PassThru` ohne `-Wait` → vor dem Warten `$p.Handle` abfragen, sonst
   ist `ExitCode` leer. `Set-Content -Encoding UTF8` schreibt in Windows PowerShell 5 ein BOM.
+- Windows PowerShell **5.1** liest `.ps1` ohne BOM als ANSI: ein „–“ (UTF-8 `E2 80 93`) wird zu `â€“`
+  und `“` beendet Zeichenketten → Skripte für 5.1 (`shell: powershell`, z. B. `tools/test_sign.ps1`)
+  nur in ASCII. `pwsh` (7.x) liest UTF-8.
 - Bash-Heredoc mit `<<'EOF'` endet an der ersten Zeile „EOF“ – auch mitten in eingebettetem
   Python-Code! Für Skripte mit solchen Zeilen andere Endmarken nutzen oder die Datei mit Write anlegen.
 - `pkill -f "<muster>"` trifft auch die eigene Shell, wenn das Muster in deren Befehlszeile steht
@@ -277,6 +318,23 @@ räumt `updater.cleanup()` Downloads und `.alt-*`-Ordner weg; `Backend._announce
   der Server bestätigt jeden Auftrag (`ok`), damit keine Daten beim schnellen Beenden verloren gehen.
 - Inno: Die Selbst-Erhöhung (UAC) passiert **vor** `[Code]` – `InitializeSetup` läuft nur im
   erhöhten Prozess; lehnt man UAC ab, endet Setup mit `ecCancelledBeforeInstall`.
+- Release v1.1.0: Das Repository wurde genau während `gh release upload` von privat auf öffentlich
+  umgestellt → HTTP 403 „Resource not accessible by integration“ trotz `contents: write`. Sichtbarkeit
+  nie während eines Release-Laufs ändern; Abhilfe: *Actions › Release › Re-run failed jobs*
+  (nur „Release veröffentlichen“ läuft neu, die gebauten Pakete werden wiederverwendet).
+- GitHub hängt an jedes Release automatisch *Source code (zip/tar.gz)* an – Nutzer halten das leicht
+  für das Programm (der Release-Text weist deshalb darauf hin).
+- **Windows 11 „intelligente App-Steuerung“** (Smart App Control) blockiert unsignierte, unbekannte
+  EXE/DLL komplett (Setup: „Die Datei konnte nicht im temporären Ordner ausgeführt werden … Fehler
+  4551“, Toast „Ein Teil dieser App wurde blockiert“) – kein „Trotzdem ausführen“, keine Ausnahme je
+  App. SmartScreen-Hinweise im README reichten nicht. Einzige saubere Lösung: Signatur.
+- Inno **prüft nach jedem SignTool-Aufruf**, ob die Datei eine Signatur trägt („returned an exit code
+  of 0, but the file does not have a digital signature“) → ein „Sammel-SignTool“ geht nicht; für
+  externe Dienste den eingebauten Zwei-Durchlauf-Mechanismus `SignedUninstallerDir` nutzen. Der
+  Dateiname enthält einen Hash (Inno-Version, Icons, Versionsinfo) → jede Version neu signieren.
+- signpath.org und jrsoftware.org sind aus dem Container gesperrt (Egress) → Inno-Hilfe lokal aus
+  `ISetup.chm` lesen (`apt-get install libchm-bin`, `extract_chmLib`), Inno-Quelltext unter
+  github.com/jrsoftware/issrc.
 
 ## 6. Teststrategie
 
@@ -287,12 +345,15 @@ räumt `updater.cleanup()` Downloads und `.alt-*`-Ordner weg; `Backend._announce
 - `tests/test_ui.py`: komplette Oberfläche mit Backend; Belegen, DnD, Cover (PNG/ICO), Abspielen,
   Bearbeiten/Rendern, Absturz-Wiederherstellung, Raster, Löschen/Rückgängig, Export,
   **echte Maus-/Touch-Ereignisse** (QTest) inkl. Langdrücken und Show-Modus, Theme-Umschaltung
-  (auch per Klick in den Einstellungen), Update-Hinweis/-Dialog.
+  (auch per Klick in den Einstellungen), Update-Hinweis/-Dialog, Zustimmungsfrage (Show-Modus).
 - `tests/test_update.py`: Versionen, Release-Auswahl (Beta, Übersprungen), lokaler Fake-GitHub-Server
   (Weiterleitung, Digest, SHA256SUMS), falsche Prüfsumme/Abbruch, Installationsart, Installer-
   Argumente, Konsistenz .iss ↔ Programm, Linux-Ordnertausch inkl. `execv`-Neustart, UpdateController.
 - `tests/test_purge.py`: Löschen nur eigener Daten (fremde Dateien, geschützte Orte bleiben), CLI.
-- CI (`build.yml`): Tests Linux+Windows; Windows: EXE + Smoke-Test, Installer bauen und mit
+- `tests/test_signing.py`: Signatur-Erkennung (PE32/PE32+), Sammeln/Einsetzen/Prüfen mit künstlichen
+  PE-Dateien, Konsistenz SignPath-Konfiguration ↔ Workflow.
+- CI (`build.yml`): Tests Linux+Windows; Windows: EXE + Smoke-Test, kompletter Signierablauf mit
+  Test-Zertifikat (2 Inno-Durchläufe, Smoke-Test der signierten EXE), Installer bauen und mit
   `tools/test_windows_installer.ps1` **echt installieren, updaten (bei laufendem Programm) und
   deinstallieren (mit Datenlöschung)**; Linux (ubuntu-22.04): Paket bauen + `test_linux_package.sh`.
 - Neue Features immer mit Test + Screenshot-Kontrolle.
@@ -300,7 +361,8 @@ räumt `updater.cleanup()` Downloads und `.alt-*`-Ordner weg; `Backend._announce
 ## 7. Neue Version veröffentlichen
 
 1. `__version__` in `launchpad_pro_tab/__init__.py` erhöhen, `CHANGELOG.md` → Abschnitt
-   `## [X.Y.Z] – Datum` (wird Release-Text und erscheint im Update-Dialog).
+   `## [Unveröffentlicht]` in `## [X.Y.Z] – Datum` umbenennen (wird Release-Text und erscheint im
+   Update-Dialog; `release_notes.py` sucht genau `## [X.Y.Z]`).
 2. Commit + Push, CI grün abwarten.
 3. `git tag vX.Y.Z && git push origin vX.Y.Z` → `release.yml` baut/testet alles, erzeugt
    `SHA256SUMS.txt` und das Release (Buchstaben in der Version → Vorabversion).
@@ -311,9 +373,9 @@ räumt `updater.cleanup()` Downloads und `.alt-*`-Ordner weg; `Backend._announce
    setzt dann der Nutzer.
 4. Assets: `LaunchpadProTAB-Setup-X.Y.Z.exe`, `LaunchpadProTAB-X.Y.Z-linux-x86_64.tar.gz`, `SHA256SUMS.txt`.
 5. Repository muss **öffentlich** sein, sonst liefert die GitHub-API 404 („Keine veröffentlichten Versionen“).
-
-Code-Signatur (optional, kostenpflichtiges Zertifikat): in `LaunchpadProTAB.iss` `SignTool=` ergänzen
-und im Workflow per Secret bereitstellen – beseitigt die SmartScreen-Warnung.
+6. Signatur: Ist `SIGNPATH_ORGANIZATION_ID` (Repository-Variable) gesetzt, schickt der Release-Lauf
+   zwei Anfragen an SignPath, die der Nutzer per E-Mail/SignPath freigeben muss (Wartezeit je 2 h);
+   sonst unsigniert. Einrichtung und Variablen: `docs/SIGNPATH.md`.
 
 ## 8. Stand der Prüfungen
 
@@ -327,7 +389,19 @@ und im Workflow per Secret bereitstellen – beseitigt die SmartScreen-Warnung.
   (Installation nach `C:\Program Files`, Verknüpfungen, Registry, Smoke-Test der installierten EXE,
   Update bei laufendem Programm inkl. `LPTABREADY`, Worker enden nach hartem Beenden, Neustart,
   Deinstallation mit Datenlöschung); Linux-Paket auf Ubuntu 22.04 grün.
-- Release v1.1.0: noch nicht veröffentlicht – Tag muss der Nutzer setzen (siehe Abschnitt 7).
+- Release v1.1.0 (25.09.2026): Workflow grün (Tests, Windows-Installer-E2E, Linux-Paket); Assets
+  `LaunchpadProTAB-Setup-1.1.0.exe`, `LaunchpadProTAB-1.1.0-linux-x86_64.tar.gz`, `SHA256SUMS.txt`.
+  Update-Prüfung gegen das echte Release geprüft: installiert 1.1.0 → „aktuell“, 1.0.0 → Angebot
+  1.1.0 mit passendem Paket und Prüfsumme (GitHub-Digest = SHA256SUMS).
+- Nach Release 1.1.0: Nutzer-PC (Windows 11) blockiert den unsignierten Installer (intelligente
+  App-Steuerung, Fehler 4551) → Zustimmungsfrage, MIT-Lizenz und SignPath-Signierung vorbereitet.
+  Lokal: Zwei-Durchlauf-Signatur unter Wine mit Test-Zertifikat komplett geprüft (sammeln → signieren
+  → einsetzen → 2. Durchlauf übernimmt Deinstaller-Signatur → Setup signiert → Installation, Dateien
+  signiert, fremd signierte behalten ihre Signatur). CI #13 (3d44501, Windows, `SIGNATUR=test`):
+  kompletter Ablauf grün – signierte PyInstaller-EXE startet (Smoke-Test), Installer-E2E meldet
+  „Signatur: LaunchpadProTAB.exe/unins000.exe“, Update + Deinstallation ok. SignPath-Antrag stellt der
+  Nutzer (`docs/SIGNPATH.md`); Signatur mit echtem Zertifikat und die SignPath-Action selbst sind
+  noch ungetestet (Eingaben der Action aus dem Gedächtnis – beim ersten echten Lauf prüfen).
 - Nicht automatisch prüfbar (auf echter Hardware testen!): tatsächliche Ausgabelatenz mit WASAPI,
   Windows-Systemlautstärke per pycaw auf einem Rechner mit Audiogerät, Touch-Bedienung auf einem
   echten Touchscreen, native Datei-Dialoge, UAC-Abfrage beim Update (CI-Runner hat keine UAC),
@@ -341,4 +415,4 @@ und im Workflow per Secret bereitstellen – beseitigt die SmartScreen-Warnung.
 - Projekt-Aufräumen (unbenutzte Audiokopien löschen) mit Rückfrage.
 - Lock-Datei gegen gleichzeitiges Öffnen desselben Projekts auf zwei Rechnern.
 - Streaming-Dekodierung für sehr lange Dateien (> 30 min), aktuell wird komplett dekodiert.
-- Code-Signatur für Installer/EXE; Delta-Updates statt Komplettpaket.
+- Delta-Updates statt Komplettpaket.

@@ -281,7 +281,7 @@ AppDialog {
                     Layout.fillWidth: true
                     Layout.topMargin: 4
                     text: "Beim Start automatisch nach Updates suchen"
-                    subText: "Nur ein Hinweis – installiert wird erst nach Ihrer Bestätigung"
+                    subText: "Fragt die öffentliche Projektseite auf GitHub ab – installiert wird erst nach Ihrer Bestätigung"
                     checked: updater.autoCheck
                     onToggled: updater.setAutoCheck(checked)
                 }
@@ -330,6 +330,15 @@ AppDialog {
                     elide: Text.ElideRight
                     onLinkActivated: (link) => Qt.openUrlExternally(link)
                     HoverHandler { cursorShape: Qt.PointingHandCursor }
+                }
+                FieldLabel { text: "Lizenz" }
+                Text {
+                    Layout.fillWidth: true
+                    text: "Open Source (MIT-Lizenz) · © 2026 TAB Theater"
+                    color: Theme.textDim
+                    font.family: Theme.fontFamily
+                    font.pixelSize: Theme.fontSmall
+                    elide: Text.ElideRight
                 }
             }
         }

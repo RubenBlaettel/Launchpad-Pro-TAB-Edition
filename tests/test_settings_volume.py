@@ -18,6 +18,26 @@ def test_settings_roundtrip_and_corruption(tmp_path):
     assert broken.buffer_frames == 0 and broken.recent_projects == []
 
 
+def test_update_check_needs_consent(tmp_path):
+    """Automatische Update-Suche nur mit Zustimmung – Einstellungen aus 1.1.0 werden übernommen."""
+    import json
+
+    path = tmp_path / "einstellungen.json"
+    assert AppSettings.load(path).update_check is None               # neu: noch nicht gefragt
+    for old, expected in (({"update_auto_check": False}, False),    # ausdrücklich abgeschaltet
+                          ({"update_auto_check": True}, None),      # 1.1.0-Standard: einmal fragen
+                          ({"update_check": True}, True),
+                          ({"update_check": "ja"}, True),
+                          ({"update_check": None, "update_auto_check": False}, None)):
+        path.write_text(json.dumps(old), encoding="utf-8")
+        assert AppSettings.load(path).update_check is expected, old
+    s = AppSettings.load(path)
+    s.update_check = False
+    s.save()
+    data = json.loads(path.read_text(encoding="utf-8"))
+    assert data["update_check"] is False and "update_auto_check" not in data
+
+
 def test_recent_audio_order_dedupe_and_limit(tmp_path):
     s = AppSettings.load(tmp_path / "s.json")
     a, b = tmp_path / "a.wav", tmp_path / "b.wav"

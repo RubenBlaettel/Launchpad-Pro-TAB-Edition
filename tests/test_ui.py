@@ -351,3 +351,29 @@ def test_update_notice_and_dialog(ctx):
     wait_until(app, lambda: False, 0.2)
     assert not updater.available and not pill.isVisible()
     assert QML_ERRORS == []
+
+
+def test_update_consent_question(ctx):
+    """Beim ersten Start fragt das Programm, ob es nach Updates suchen darf (nie im Show-Modus)."""
+    from PySide6.QtCore import QObject, Qt
+    from PySide6.QtTest import QTest
+
+    app, backend, win = ctx.app, ctx.backend, ctx.window
+    updater = backend.updater
+    dlg = win.findChild(QObject, "updateConsentDialog")
+    assert ctx.settings.update_check is None and not updater.consentPending
+
+    backend.setShowMode(True)
+    updater.start(delay_ms=10)
+    assert wait_until(app, lambda: updater.consentPending, 3)
+    wait_until(app, lambda: False, 1.2)
+    assert not dlg.property("visible")                  # nicht während der Vorstellung
+    backend.setShowMode(False)
+    assert wait_until(app, lambda: dlg.property("opened"), 5)
+    wait_until(app, lambda: False, 0.3)
+    QTest.mouseClick(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, _center(win, "consentYesButton"))
+    assert wait_until(app, lambda: ctx.settings.update_check is True, 3)
+    assert wait_until(app, lambda: not dlg.property("visible"), 3)
+    assert not updater.consentPending and updater.autoCheck
+    wait_until(app, lambda: updater.state in ("idle", "uptodate", "available"), 5)   # Test-URL: kein Netz
+    assert QML_ERRORS == []

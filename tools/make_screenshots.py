@@ -213,6 +213,12 @@ def main() -> int:
         published=datetime(2026, 10, 12, 18, 0, tzinfo=timezone.utc), prerelease=False,
         assets=[Asset("LaunchpadProTAB-Setup-1.2.0.exe", "https://example.invalid/setup.exe", 118_400_000, "0" * 64)],
     )
+    # Einmalige Frage beim ersten Start (automatische Update-Suche nur mit Zustimmung)
+    call("updateConsentDialog", "open")
+    grab("18_update_frage.png")
+    call("updateConsentDialog", "close")
+    wait(300)
+
     updater = backend.updater
     updater._kind = InstallKind.WINDOWS_INSTALLER
     updater._manual = False
@@ -223,6 +229,7 @@ def main() -> int:
     grab("16_update_dialog.png")
     call("updateDialog", "close")
     wait(300)
+    updater.setAutoCheck(True)                          # Zustand nach „Ja, automatisch suchen“
     call("settingsDialog", "openPage", 2)
     grab("17_einstellungen_updates.png")
     call("settingsDialog", "close")
