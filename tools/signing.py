@@ -66,7 +66,8 @@ def is_signed(path: Path) -> bool:
 
 def unsigned_program_files(program: Path, *, own_only: bool = False) -> list[Path]:
     files = []
-    for path in sorted(program.rglob("*")):
+    # Feste Reihenfolge auf allen Systemen (Windows vergleicht Pfade sonst ohne Groß-/Kleinschreibung)
+    for path in sorted(program.rglob("*"), key=lambda p: p.relative_to(program).as_posix()):
         if not path.is_file() or path.suffix.lower() not in PE_SUFFIXES:
             continue
         if own_only and path.name not in OWN_FILES:
