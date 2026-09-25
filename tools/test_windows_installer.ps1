@@ -64,6 +64,13 @@ $key = Get-ItemProperty -Path $UninstallKey
 Assert ($key.DisplayName -eq $AppName) "Eintrag unter Apps & Features"
 Write-Host "  installierte Version: $($key.DisplayVersion)"
 Assert ((Get-ItemProperty "HKLM:\SOFTWARE\Classes\.lptab").'(default)' -eq "LaunchpadProTAB.Projekt") "Dateizuordnung .lptab"
+if ($env:SIGNATUR -and $env:SIGNATUR -ne "keine") {
+    # Signierter Build (CI: Test-Zertifikat, Release: SignPath): Programm und Deinstaller tragen eine
+    # Signatur – der Deinstaller ist zugleich die Datei, die Setup im Temp-Ordner ausführt.
+    foreach ($f in @($Exe, (Join-Path $AppDir "unins000.exe"))) {
+        Assert ($null -ne (Get-AuthenticodeSignature -FilePath $f).SignerCertificate) "Signatur: $(Split-Path $f -Leaf)"
+    }
+}
 Assert (Test-Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\LaunchpadProTAB.exe") "App Paths (Win+R)"
 
 Write-Host "== 2. Installiertes Programm: Selbsttest"

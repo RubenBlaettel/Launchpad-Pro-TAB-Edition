@@ -42,7 +42,7 @@ Master-Fader für die Windows-Systemlautstärke, ein **dunkles und ein helles De
 7. [Fehlerbehebung](#fehlerbehebung)
 8. [Für Entwickler: Technik & Architektur](#für-entwickler-technik--architektur)
 9. [Neue Version veröffentlichen](#neue-version-veröffentlichen)
-10. [Lizenzen der verwendeten Komponenten](#lizenzen-der-verwendeten-komponenten)
+10. [Lizenz, Code-Signatur und Datenschutz](#lizenz-code-signatur-und-datenschutz)
 
 ---
 
@@ -86,9 +86,11 @@ Windows-Design an. (Die Bilder oben stammen aus einer Testumgebung; unter Window
 Assistent etwas moderner, Inhalt und Ablauf sind identisch.)
 
 > **Hinweise:** Für die Installation nach `C:\Program Files` fragt Windows nach Administratorrechten.
-> Da der Installer nicht digital signiert ist, kann Windows SmartScreen beim ersten Start warnen:
-> *Weitere Informationen → Trotzdem ausführen*. Voraussetzung: Windows 10 (Version 1809) oder
-> Windows 11, 64 Bit.
+> Solange eine Version noch unbekannt ist, kann Windows SmartScreen beim ersten Start warnen:
+> *Weitere Informationen → Trotzdem ausführen*. **Unsignierte** Versionen (bis einschließlich 1.1.0)
+> blockiert die *intelligente App-Steuerung* von Windows 11 vollständig (Fehler 4551) – siehe
+> [Fehlerbehebung](#fehlerbehebung) und [Code-Signatur](#code-signatur). Voraussetzung: Windows 10
+> (Version 1809) oder Windows 11, 64 Bit.
 
 Für Administratoren (Verteilung auf mehrere Rechner) funktioniert auch eine stille Installation:
 
@@ -175,8 +177,15 @@ ideal 1920×1080.
 
 ## Updates
 
-Launchpad Pro prüft **beim Start** (und danach alle 12 Stunden) im Hintergrund, ob auf GitHub eine
-neue Version veröffentlicht wurde. Ist eine da, erscheint oben in der Kopfleiste der Knopf
+Beim **ersten Start** fragt Launchpad Pro einmal, ob es automatisch nach Updates suchen darf – vorher
+baut das Programm keine Verbindung ins Internet auf (siehe [Datenschutz](#datenschutz)). Die Frage
+erscheint nie während einer Vorstellung (Show-Modus); schließt man sie ohne Antwort, kommt sie beim
+nächsten Start wieder.
+
+![Frage beim ersten Start](docs/images/18_update_frage.png)
+
+Mit Zustimmung prüft Launchpad Pro **beim Start** (und danach alle 12 Stunden) im Hintergrund, ob auf
+GitHub eine neue Version veröffentlicht wurde. Ist eine da, erscheint oben in der Kopfleiste der Knopf
 **Update x.y.z** und kurz ein Hinweis unten – mitten in einer Vorstellung (Show-Modus) nur der Knopf.
 Ohne Internetverbindung passiert einfach nichts.
 
@@ -198,8 +207,8 @@ Ein Tipp auf den Knopf zeigt, was neu ist:
 - Im **Show-Modus** ist *Jetzt aktualisieren* gesperrt – laufende Wiedergaben würden beendet.
 
 Unter **Einstellungen › Updates** kann man jederzeit selbst nach Updates suchen, die automatische
-Prüfung abschalten (z. B. auf einem Bühnenrechner ohne Internet) oder **Vorabversionen (Beta)**
-zulassen, um neue Funktionen vor der Freigabe zu testen.
+Prüfung ein- oder ausschalten (z. B. auf einem Bühnenrechner ohne Internet) oder **Vorabversionen
+(Beta)** zulassen, um neue Funktionen vor der Freigabe zu testen.
 
 ![Einstellungen › Updates](docs/images/17_einstellungen_updates.png)
 
@@ -447,7 +456,8 @@ heruntergemischt, abweichende Sampleraten in hoher Qualität umgerechnet.
 | Master-Fader zeigt „Simuliert“ | Die Systemlautstärke ist nicht erreichbar (z. B. kein Wiedergabegerät). Der Fader funktioniert dann nur optisch. |
 | Kachel zeigt „Datei fehlt“ | Die Audiodatei wurde aus dem Projektordner entfernt. Kachel neu belegen. |
 | Datei lässt sich nicht laden | Format beschädigt oder ohne Tonspur – Meldung unten lesen; ggf. Datei in WAV/MP3 umwandeln. |
-| Windows warnt beim Installer („Windows hat den PC geschützt“) | Der Installer ist nicht digital signiert: *Weitere Informationen → Trotzdem ausführen*. |
+| Windows warnt beim Installer („Windows hat den PC geschützt“) | SmartScreen kennt die Datei noch nicht: *Weitere Informationen → Trotzdem ausführen*. |
+| Installer bricht ab: „Die Datei konnte nicht im temporären Ordner ausgeführt werden … Fehler 4551: Eine Anwendungssteuerungsrichtlinie hat diese Datei blockiert“, dazu „Ein Teil dieser App wurde blockiert“ | Das ist die **intelligente App-Steuerung** von Windows 11: Sie lässt nur digital signierte oder bei Microsoft bekannte Programme zu – eine Ausnahme für einzelne Programme gibt es nicht. Signierte Versionen laufen ohne Umstellung (siehe [Code-Signatur](#code-signatur)). Für eine unsignierte Version: *Windows-Sicherheit › App- & Browsersteuerung › Einstellungen für intelligente App-Steuerung › Aus* (je nach Windows-Version lässt sie sich danach nur durch Zurücksetzen von Windows wieder einschalten). |
 | „Keine veröffentlichten Versionen gefunden“ bei der Update-Suche | Es gibt noch kein Release, oder das GitHub-Repository ist privat. |
 | „GitHub-Abfragelimit erreicht“ | Viele Rechner hinter einem Internetanschluss haben kurz nacheinander gesucht – nach einer Stunde erneut versuchen. |
 | Update schlägt fehl | Meldung im Update-Dialog lesen; das installierte Programm bleibt unverändert. Protokoll: `%LOCALAPPDATA%\LaunchpadProTAB\updates\installation.log`. Notfalls den Installer von der Release-Seite manuell starten. |
@@ -551,10 +561,13 @@ launchpad_pro_tab/
 packaging/
 ├── launchpad_pro_tab.spec     PyInstaller (Windows-EXE und Linux-Programmordner)
 ├── windows/LaunchpadProTAB.iss  Inno-Setup-Skript + Assistenten-Bilder
+├── signpath/artifact-configuration.xml  Signatur-Konfiguration für SignPath
 └── linux/install.sh, uninstall.sh
-tests/                  pytest (Kernlogik, Audio, Updates, Deinstallation, UI inkl. Maus/Touch)
-tools/                  Screenshots, Installer/Linux-Paket bauen und testen, Icons, Versionshinweise
-.github/workflows/      build.yml (Tests + Pakete + Installer-Test), ci.yml, release.yml
+tests/                  pytest (Kernlogik, Audio, Updates, Signatur, Deinstallation, UI inkl. Maus/Touch)
+tools/                  Screenshots, Installer/Linux-Paket bauen, signieren (signing.py) und testen,
+                        Icons, Versionshinweise
+docs/                   Bilder der Anleitung, SIGNPATH.md (Code-Signatur einrichten)
+.github/workflows/      build.yml (Tests + Pakete + Signatur + Installer-Test), ci.yml, release.yml
 ```
 
 **Entwickeln und prüfen**
@@ -577,8 +590,8 @@ Weitere Hinweise für die Weiterentwicklung (auch mit Claude Code) stehen in [`C
 ## Neue Version veröffentlichen
 
 1. Versionsnummer in `launchpad_pro_tab/__init__.py` erhöhen (z. B. `1.2.0`) und in
-   [`CHANGELOG.md`](CHANGELOG.md) einen Abschnitt `## [1.2.0] – Datum` mit den Neuerungen anlegen.
-   Dieser Text erscheint später im Update-Dialog.
+   [`CHANGELOG.md`](CHANGELOG.md) den Abschnitt `## [Unveröffentlicht]` in `## [1.2.0] – Datum`
+   umbenennen (bzw. anlegen). Dieser Text erscheint später im Update-Dialog.
 2. Committen, pushen und warten, bis **CI** grün ist.
 3. Tag setzen und pushen:
 
@@ -592,7 +605,9 @@ Weitere Hinweise für die Weiterentwicklung (auch mit Claude Code) stehen in [`C
    Zweig mit dem Code auswählen, Titel z. B. „Launchpad Pro TAB Edition 1.2.0“ → *Publish release*.
    Der Workflow ergänzt anschließend Installer, Linux-Paket, Prüfsummen und Versionshinweise.
    (Sobald der Workflow im Standardzweig liegt, geht es auch über *Actions › Release › Run workflow*.)
-4. Der Workflow **Release** baut Windows-Installer und Linux-Paket, testet beide, erstellt die
+4. Der Workflow **Release** baut Windows-Installer und Linux-Paket, signiert die Windows-Dateien
+   über SignPath (sobald eingerichtet, siehe [`docs/SIGNPATH.md`](docs/SIGNPATH.md) – dann kommen zwei
+   E-Mails von SignPath, die jeweils freigegeben werden müssen), testet beide Pakete, erstellt die
    Prüfsummen (`SHA256SUMS.txt`) und veröffentlicht das GitHub-Release. Versionen mit Buchstaben
    (z. B. `1.3.0-beta.1`) werden als **Vorabversion** veröffentlicht und nur Programmen angeboten,
    bei denen *Vorabversionen (Beta)* eingeschaltet ist.
@@ -603,7 +618,48 @@ Programm nach dem Update immer wieder dieselbe Version anbieten).
 
 ---
 
-## Lizenzen der verwendeten Komponenten
+## Lizenz, Code-Signatur und Datenschutz
 
-Siehe [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md). Alle Klänge und Bilder in den Screenshots
-sind synthetisch erzeugt (`tools/demo_assets.py`).
+### Lizenz
+
+Launchpad Pro TAB Edition ist freie Software unter der **MIT-Lizenz** – siehe [`LICENSE`](LICENSE)
+(© 2026 TAB Theater). Die mitgelieferten Komponenten stehen unter ihren eigenen Lizenzen, siehe
+[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md); beide Texte liegen auch im Programmordner. Alle
+Klänge und Bilder in den Screenshots sind synthetisch erzeugt (`tools/demo_assets.py`).
+
+### Code-Signatur
+
+Windows-Installer und Programmdateien werden über das kostenlose Open-Source-Programm der
+SignPath Foundation digital signiert (Code signing policy):
+
+*Free code signing provided by [SignPath.io](https://about.signpath.io/), certificate by
+[SignPath Foundation](https://signpath.org/).*
+
+- Signiert werden ausschließlich Dateien, die GitHub Actions aus diesem Repository baut
+  (Workflow `release.yml`); jede Signatur für ein Release wird von Hand freigegeben.
+- Signiert werden der Installer, der Deinstaller, `LaunchpadProTAB.exe` und die mitgelieferten
+  Open-Source-Bibliotheken ohne Herstellersignatur (Einrichtung: [`docs/SIGNPATH.md`](docs/SIGNPATH.md)).
+- Committer und Reviewer: [RubenBlaettel](https://github.com/RubenBlaettel) ·
+  Freigabe (Approver): [RubenBlaettel](https://github.com/RubenBlaettel)
+
+> **Stand:** Die Aufnahme bei der SignPath Foundation läuft. Bis zur ersten signierten Version sind
+> Installer und Programm unsigniert – Windows 11 mit **intelligenter App-Steuerung** blockiert sie
+> dann (siehe [Fehlerbehebung](#fehlerbehebung)).
+
+### Datenschutz
+
+Launchpad Pro überträgt keine Informationen an andere Rechner oder Dienste, außer Sie verlangen es
+ausdrücklich:
+
+- **Update-Suche** – nur nach Zustimmung (Frage beim ersten Start, änderbar unter
+  *Einstellungen › Updates*) oder per Klick auf *Jetzt nach Updates suchen*. Abgefragt wird die
+  öffentliche GitHub-API (`api.github.com`); übertragen werden dabei nur die üblichen
+  Verbindungsdaten (z. B. die IP-Adresse) und die Programmversion.
+- **Update-Download** – nur nach Klick auf *Jetzt aktualisieren* (von `github.com`).
+- **Links**, z. B. zur Download-Seite, öffnen sich nur auf Klick im Browser.
+
+Es gibt keine Telemetrie, keine Nutzungsstatistik und keine Absturzberichte ins Internet; Projekte,
+Audiodateien und Einstellungen bleiben auf dem Rechner.
+
+*This program will not transfer any information to other networked systems unless specifically
+requested by the user or the person installing or operating it.*

@@ -102,6 +102,22 @@ OutputBaseFilename=LaunchpadProTAB-Setup-{#AppVersion}
 Compression=lzma2/max
 SolidCompression=yes
 
+; Digitale Signatur (siehe tools/build_installer.py und tools/signing.py). Der Deinstaller ist
+; dieselbe Datei, die Setup im Temp-Ordner ausführt (…Setup-x.y.z.tmp) – beide brauchen eine Signatur,
+; sonst blockiert die intelligente App-Steuerung von Windows 11 die Installation (Fehler 4551).
+#ifdef SignToolName
+; a) Signieren beim Bauen mit einem lokalen Werkzeug (z. B. signtool und eigenem Zertifikat)
+SignTool={#SignToolName}
+SignedUninstaller=yes
+#endif
+#ifdef SignedUninstallerDir
+; b) Externe Signatur (SignPath): 1. Durchlauf legt uninst-<Version>-<Hash>.e64 unsigniert in diesem
+;    Ordner an und bricht ab; signiert zurückgelegt übernimmt der 2. Durchlauf die Signatur.
+;    Setup.exe selbst wird danach signiert.
+SignedUninstaller=yes
+SignedUninstallerDir={#SignedUninstallerDir}
+#endif
+
 [Languages]
 Name: "german"; MessagesFile: "compiler:Languages\German.isl"
 

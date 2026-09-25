@@ -31,7 +31,7 @@ class AppSettings:
     projects_dir: str | None = None
     window: dict[str, Any] = field(default_factory=dict)
     theme: str = "dark"                  # "dark" | "light" | "system"
-    update_auto_check: bool = True       # beim Start nach Updates suchen
+    update_check: bool | None = None     # beim Start nach Updates suchen – None: noch nicht gefragt
     update_prereleases: bool = False     # auch Vorabversionen (Beta) anbieten
     update_skipped: str | None = None    # "Diese Version überspringen"
     update_last_check: str | None = None
@@ -50,6 +50,10 @@ class AppSettings:
                 for key, value in raw.items():
                     if key in cls.__dataclass_fields__ and not key.startswith("_"):
                         setattr(settings, key, value)
+                # Version 1.1.0 kannte nur „update_auto_check“ (Standard an, ohne Rückfrage):
+                # ausdrücklich abgeschaltet bleibt aus, sonst wird einmal gefragt.
+                if "update_check" not in raw and raw.get("update_auto_check") is False:
+                    settings.update_check = False
             except Exception as exc:  # beschädigte Datei -> Standardwerte
                 log.warning("Einstellungen konnten nicht gelesen werden (%s) – Standardwerte.", exc)
         settings._path = path
@@ -82,7 +86,8 @@ class AppSettings:
             self.stop_fade_ms = STOP_FADE_MS_DEFAULT
         if self.theme not in THEME_MODES:
             self.theme = "dark"
-        self.update_auto_check = bool(self.update_auto_check)
+        if self.update_check is not None:
+            self.update_check = bool(self.update_check)
         self.update_prereleases = bool(self.update_prereleases)
         for key in ("update_skipped", "update_last_check", "last_version"):
             if not isinstance(getattr(self, key), (str, type(None))):

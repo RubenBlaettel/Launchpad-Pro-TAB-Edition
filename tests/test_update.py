@@ -247,6 +247,9 @@ def test_installer_script_matches_program():
     assert "--purge-user-data --yes" in iss
     # Beim Update warten, bis auch die Worker-Prozesse die Programmdatei freigegeben haben
     assert "function PrepareToInstall(" in iss and "FileInUse(Exe)" in iss
+    # Signatur: lokal (SignTool) oder extern in zwei Durchläufen (SignedUninstallerDir)
+    assert "#ifdef SignToolName" in iss and "SignTool={#SignToolName}" in iss
+    assert "#ifdef SignedUninstallerDir" in iss and "SignedUninstallerDir={#SignedUninstallerDir}" in iss
     assert "OutputBaseFilename=LaunchpadProTAB-Setup-{#AppVersion}" in iss
     assert "DefaultDirName={autopf}\\" in iss                      # C:\Program Files
 
@@ -444,6 +447,53 @@ def test_update_controller_windows_waits_for_elevated_installer(qapp, github, tm
             assert wait_until(qapp, lambda: upd.state == "error", 5)
             assert resumed and not quit_
             assert "Sicherheitsabfrage" in upd.message
+    finally:
+        upd.shutdown()
+        runner.shutdown()
+
+
+@pytest.mark.parametrize("answer", [True, False])
+def test_update_controller_asks_before_first_check(qapp, github, tmp_path, monkeypatch, answer):
+    """Ohne Zustimmung keine Verbindung zu GitHub; die Antwort wird gespeichert."""
+    from launchpad_pro_tab.bridge.tasks import TaskRunner
+    from launchpad_pro_tab.bridge.updater import UpdateController
+    from launchpad_pro_tab.core.settings import AppSettings
+
+    github.add_release("v9.0.0", {"LaunchpadProTAB-Setup-9.0.0.exe": b"MZ" + os.urandom(1000)})
+    monkeypatch.setenv("LPTAB_UPDATE_URL", github.url + "/api/releases")
+    path = tmp_path / "e.json"
+    runner = TaskRunner(use_processes=False)
+    upd = UpdateController(runner, AppSettings.load(path), kind=InstallKind.WINDOWS_INSTALLER)
+    pending = []
+    upd.consentChanged.connect(lambda: pending.append(upd.consentPending))
+    try:
+        assert not upd.consentPending and not upd.autoCheck
+        upd.start(delay_ms=20)
+        assert wait_until(qapp, lambda: upd.consentPending, 5)
+        wait_until(qapp, lambda: False, 0.4)
+        assert github.requests == [] and upd.state == "idle"          # noch keine Verbindung
+        upd.answerConsent(answer)
+        assert not upd.consentPending and pending == [True, False]
+        assert AppSettings.load(path).update_check is answer          # dauerhaft gespeichert
+        if answer:
+            assert wait_until(qapp, lambda: upd.state == "available", 10), upd.message
+            assert upd.autoCheck and github.requests
+        else:
+            wait_until(qapp, lambda: False, 0.6)
+            assert github.requests == [] and upd.state == "idle" and not upd.autoCheck
+    finally:
+        upd.shutdown()
+        runner.shutdown()
+
+    # Nächster Start: nicht erneut fragen; mit Zustimmung wird direkt gesucht
+    github.requests.clear()
+    runner = TaskRunner(use_processes=False)
+    upd = UpdateController(runner, AppSettings.load(path), kind=InstallKind.WINDOWS_INSTALLER)
+    try:
+        upd.start(delay_ms=20)
+        wait_until(qapp, lambda: upd.state == "available", 3 if answer else 0.6)
+        assert not upd.consentPending
+        assert bool(github.requests) is answer
     finally:
         upd.shutdown()
         runner.shutdown()
