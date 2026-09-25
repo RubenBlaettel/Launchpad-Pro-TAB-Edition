@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Build (PyInstaller)
+build/
+dist/
+
+# Laufzeitdaten von Projekten (falls ein Projekt im Repo-Ordner angelegt wird)
+.cache/
+.autosave/
+
+# System
+.DS_Store
+Thumbs.db
+*.log
