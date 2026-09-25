@@ -221,6 +221,43 @@ begin
   end;
 end;
 
+function FileInUse(const FileName: String): Boolean;
+var
+  Stream: TFileStream;
+begin
+  Result := False;
+  if not FileExists(FileName) then
+    Exit;
+  try
+    Stream := TFileStream.Create(FileName, fmOpenReadWrite or fmShareExclusive);
+    Stream.Free;
+  except
+    Result := True;
+  end;
+end;
+
+{ Beim Update: Die Hintergrundprozesse des Programms (Worker, ebenfalls LaunchpadProTAB.exe)
+  enden kurz nach dem Hauptprozess. Warten, bis die Programmdatei frei ist (höchstens 30 s) –
+  danach greift die übliche Prüfung auf verwendete Dateien (CloseApplications). }
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+var
+  Exe: String;
+  Waited: Cardinal;
+begin
+  Result := '';
+  if StrToIntDef(ExpandConstant('{param:LPTABWAITPID|0}'), 0) <= 0 then
+    Exit;
+  Exe := ExpandConstant('{app}\{#AppExe}');
+  Waited := 0;
+  while FileInUse(Exe) and (Waited < 30000) do
+  begin
+    Sleep(250);
+    Waited := Waited + 250;
+  end;
+  if Waited > 0 then
+    Log(Format('Programmdatei war noch in Verwendung – %d ms gewartet.', [Waited]));
+end;
+
 function InstalledVersion(): String;
 begin
   Result := '';

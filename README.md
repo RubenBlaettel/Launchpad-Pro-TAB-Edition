@@ -96,9 +96,10 @@ LaunchpadProTAB-Setup-1.1.0.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART
 LaunchpadProTAB-Setup-1.1.0.exe /VERYSILENT /DIR="D:\Programme\Launchpad" /TASKS="startmenuicon"
 ```
 
-Ohne Installation geht es auch: Unter *Actions → CI → neuester Lauf → Artifacts* liegt der
-Programmordner **LaunchpadProTAB-Windows** (entpacken, `LaunchpadProTAB.exe` starten). Diese portable
-Variante bietet beim Update an, auf die installierte Version umzusteigen.
+Zwischenstände (noch nicht veröffentlicht) gibt es unter *Actions → CI → neuester Lauf → Artifacts*:
+**LaunchpadProTAB-Windows-Installer** (Installer), **LaunchpadProTAB-Windows** (Programmordner ohne
+Installation – entpacken, `LaunchpadProTAB.exe` starten; bietet beim Update an, auf die installierte
+Version umzusteigen) und **LaunchpadProTAB-Linux**. GitHub bewahrt sie 30 Tage auf.
 
 ### Linux (Programmpaket)
 
@@ -519,8 +520,8 @@ Bruchteil der verfügbaren Zeit – Reserven gegen Aussetzer sind also reichlich
 4. **Windows:** Installer still starten (`/SILENT /LPTABWAITPID=<pid> /LPTABREADY=<datei> /LPTABRESTART=1`).
    Erst wenn der Installer nach der Windows-Sicherheitsabfrage mit Administratorrechten läuft und die
    Bereit-Datei anlegt, beendet sich das Programm – wird die Abfrage abgelehnt, läuft es einfach
-   weiter. Der Installer wartet auf das Prozessende, ersetzt die Dateien und startet das Programm als
-   normaler Benutzer neu. **Linux:** Archiv neben den Programmordner entpacken, die
+   weiter. Der Installer wartet auf das Prozessende (auch der Hintergrundprozesse), ersetzt die
+   Dateien und startet das Programm als normaler Benutzer neu. **Linux:** Archiv neben den Programmordner entpacken, die
    *neue* Version übernimmt als Hilfsprozess (`--finish-update`) den Ordnertausch und startet neu;
    ohne Schreibrechte über `pkexec install.sh --update`.
 

@@ -309,6 +309,8 @@ class UpdateController(PropertyObject):
                 raise InstallError(install.install_hint(self._kind))
         except (InstallError, OSError) as exc:
             log.exception("Update konnte nicht installiert werden")
+            if self.resume_hook is not None:
+                self.resume_hook()
             self._set_state("error", f"Update fehlgeschlagen: {exc}")
 
     def _watch_installer(self) -> None:
@@ -360,6 +362,8 @@ class UpdateController(PropertyObject):
                 install.spawn_detached(cmd)
             except (InstallError, OSError) as exc:
                 log.exception("Update konnte nicht installiert werden")
+                if self.resume_hook is not None:
+                    self.resume_hook()
                 self._set_state("error", f"Update fehlgeschlagen: {exc}")
                 return
             self.quitRequested.emit()

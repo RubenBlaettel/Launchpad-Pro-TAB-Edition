@@ -245,6 +245,8 @@ def test_installer_script_matches_program():
     for param in ("LPTABWAITPID", "LPTABRESTART", "LPTABPURGE", "LPTABREADY"):
         assert f"{{param:{param}|" in iss
     assert "--purge-user-data --yes" in iss
+    # Beim Update warten, bis auch die Worker-Prozesse die Programmdatei freigegeben haben
+    assert "function PrepareToInstall(" in iss and "FileInUse(Exe)" in iss
     assert "OutputBaseFilename=LaunchpadProTAB-Setup-{#AppVersion}" in iss
     assert "DefaultDirName={autopf}\\" in iss                      # C:\Program Files
 

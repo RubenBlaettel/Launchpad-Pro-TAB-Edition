@@ -85,3 +85,36 @@ def test_task_runner_falls_back_to_threads(qapp):
         assert runner.pending == 0
     finally:
         runner.shutdown()
+
+
+def test_workers_end_when_main_program_dies(tmp_path):
+    """Verwaiste Worker würden Programmdateien sperren (Update/Deinstallation) – sie müssen
+    sich selbst beenden, wenn das Hauptprogramm abstürzt."""
+    import subprocess
+    import sys
+    import time
+
+    from conftest import ROOT
+    from launchpad_pro_tab.update.install import _pid_alive
+
+    script = tmp_path / "eltern.py"
+    script.write_text(
+        "import os, sys\n"
+        f"sys.path.insert(0, {str(ROOT)!r})\n"
+        "import multiprocessing as mp\n"
+        "from concurrent.futures import ProcessPoolExecutor\n"
+        "from launchpad_pro_tab.audio.tasks import ping, worker_init\n"
+        "if __name__ == '__main__':\n"
+        "    pool = ProcessPoolExecutor(2, mp_context=mp.get_context('spawn'), initializer=worker_init)\n"
+        "    pids = {pool.submit(ping).result() for _ in range(6)}\n"
+        "    print(' '.join(map(str, pids)), flush=True)\n"
+        "    os._exit(0)   # Absturz simulieren: kein Aufräumen\n",
+        encoding="utf-8",
+    )
+    out = subprocess.run([sys.executable, str(script)], capture_output=True, text=True, timeout=120)
+    pids = [int(p) for p in out.stdout.split()]
+    assert pids, out.stderr
+    deadline = time.monotonic() + 15
+    while time.monotonic() < deadline and any(_pid_alive(p) for p in pids):
+        time.sleep(0.1)
+    assert not any(_pid_alive(p) for p in pids), "Worker laufen nach dem Ende des Hauptprogramms weiter"

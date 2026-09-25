@@ -131,7 +131,8 @@ launchpad_pro_tab/
     engine.py         AudioEngine: Mixer im PortAudio-Callback, Befehls-deque, Snapshots, Limiter,
                       Pegel, Vorschau-Stimme (_PreviewVoice), Prefetch-Thread
     output.py         SoundDeviceBackend (WASAPI bevorzugt), NullBackend, Geräteliste
-    tasks.py          Prozess-Aufgaben: prepare(), render_edit(), probe_file(), ping()
+    tasks.py          Prozess-Aufgaben: prepare(), render_edit(), probe_file(), ping();
+                      worker_init(): Worker beenden sich selbst, wenn das Hauptprogramm endet
   update/             KEIN Qt!
     version.py        parse_version/is_newer (1.2.0, v1.2.0, 1.3.0-beta.1, 1.3.0b1 …)
     net.py            urllib, nur https (http nur localhost), Zertifikate: System, Fallback certifi
@@ -191,7 +192,8 @@ verwerfen veraltete Ergebnisse.
 Worker-Prozesse beenden) → **Windows**: Installer `/SILENT /LPTABWAITPID /LPTABREADY /LPTABRESTART`
 starten; erst wenn Setup (mit Adminrechten) die `LPTABREADY`-Datei anlegt → `quitRequested` →
 QML `Qt.quit()`; endet der Installer vorher (UAC abgelehnt) → `resume_hook` (Worker wieder an),
-Fehlermeldung, Programm läuft weiter. Inno wartet in `InitializeSetup` auf den Prozess, ersetzt
+Fehlermeldung, Programm läuft weiter. Inno wartet in `InitializeSetup` auf den Prozess und in
+`PrepareToInstall` (max. 30 s), bis `LaunchpadProTAB.exe` nicht mehr in Verwendung ist (Worker), ersetzt
 `_internal` komplett, startet per `runasoriginaluser` neu → **Linux**: `extract_bundle` neben den
 Programmordner, `spawn_detached(<neu>/LaunchpadProTAB --finish-update <ordner> --wait-pid <pid> -- --project …)`,
 beenden; der Hilfsprozess tauscht die Ordner und `execv`t die neue Version. Beim nächsten Start
@@ -264,7 +266,12 @@ räumt `updater.cleanup()` Downloads und `.alt-*`-Ordner weg; `Backend._announce
   ist `ExitCode` leer. `Set-Content -Encoding UTF8` schreibt in Windows PowerShell 5 ein BOM.
 - Bash-Heredoc mit `<<'EOF'` endet an der ersten Zeile „EOF“ – auch mitten in eingebettetem
   Python-Code! Für Skripte mit solchen Zeilen andere Endmarken nutzen oder die Datei mit Write anlegen.
-- `pkill -f "<muster>"` trifft auch die eigene Shell, wenn das Muster in deren Befehlszeile steht.
+- `pkill -f "<muster>"` trifft auch die eigene Shell, wenn das Muster in deren Befehlszeile steht
+  (Abhilfe: `pgrep -f '[s]pawn_main'` – die Klammer verhindert den Selbsttreffer).
+- `ProcessPoolExecutor`-Worker überleben einen Absturz/hartes Beenden des Hauptprogramms (jeder
+  Worker hält auch das Schreibende der Queue) und sperren dann `LaunchpadProTAB.exe`/DLLs →
+  Update/Deinstallation scheitern. Deshalb `initializer=worker_init` (wartet auf
+  `multiprocessing.parent_process()` und beendet den Worker). Test: `test_workers_end_when_main_program_dies`.
 - Einzelinstanz unter Windows: Client und Server im **selben** Prozess funktionieren mit Named Pipes
   nicht zuverlässig (blockierende Waits) → Test startet den zweiten Programmstart als eigenen Prozess;
   der Server bestätigt jeden Auftrag (`ok`), damit keine Daten beim schnellen Beenden verloren gehen.

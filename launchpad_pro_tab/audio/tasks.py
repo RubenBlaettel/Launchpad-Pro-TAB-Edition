@@ -20,6 +20,26 @@ from .dsp import apply_edge_fades, soft_limit
 from .timestretch import stretch
 
 
+def worker_init() -> None:
+    """Start jedes Worker-Prozesses: beendet ihn, sobald das Hauptprogramm endet.
+
+    Auch wenn das Hauptprogramm abstürzt oder hart beendet wird – sonst blieben verwaiste
+    Worker zurück, die Programmdateien sperren (Update/Deinstallation schlagen dann fehl).
+    """
+    import multiprocessing
+    import threading
+
+    parent = multiprocessing.parent_process()
+    if parent is None:
+        return
+
+    def watch() -> None:
+        parent.join()
+        os._exit(0)
+
+    threading.Thread(target=watch, name="lptab-elternwaechter", daemon=True).start()
+
+
 def ping() -> int:
     """Startet einen Worker vorab (Import von soundfile/av/soxr), ohne Qt zu laden.
 

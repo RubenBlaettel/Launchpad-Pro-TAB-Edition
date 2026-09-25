@@ -34,6 +34,15 @@ function Assert($Condition, $Message) {
     Write-Host "  ok: $Message"
 }
 
+# Bei einem Fehler die Installer-Protokolle direkt ausgeben (Artefakte sind nicht immer abrufbar)
+trap {
+    Get-ChildItem $Logs -Filter "*.log" -ErrorAction SilentlyContinue | ForEach-Object {
+        Write-Host "---- $($_.Name) (letzte 60 Zeilen) ----"
+        Get-Content $_.FullName -Tail 60 -ErrorAction SilentlyContinue | ForEach-Object { Write-Host "  $_" }
+    }
+    break
+}
+
 function Run-Setup([string[]]$Arguments, [string]$LogName) {
     $log = Join-Path $Logs $LogName
     $p = Start-Process -FilePath $Setup -ArgumentList ($Arguments + "/LOG=`"$log`"") -Wait -PassThru
@@ -65,6 +74,12 @@ Write-Host "== 3. Update, während das Programm läuft"
 $app = Start-Process -FilePath $Exe -ArgumentList "--no-update-check" -PassThru
 Start-Sleep -Seconds 8
 Assert (-not $app.HasExited) "Programm läuft (Instanz-Mutex aktiv)"
+# Hintergrundprozesse (Worker) merken – Handle sofort öffnen, damit HasExited verlässlich ist
+$workers = @(Get-CimInstance Win32_Process -Filter "ParentProcessId = $($app.Id)" |
+    ForEach-Object { Get-Process -Id $_.ProcessId -ErrorAction SilentlyContinue } |
+    Where-Object { $_ -and $_.ProcessName -eq "LaunchpadProTAB" })
+$workers | ForEach-Object { $null = $_.Handle }
+Write-Host "  Hintergrundprozesse des Programms: $($workers.Count)"
 Get-ChildItem $AppDir -Filter "*.marker" -ErrorAction SilentlyContinue | Remove-Item
 Set-Content -Path (Join-Path $AppDir "_internal\veraltet.marker") -Value "alt"
 $ready = Join-Path $Logs "bereit.flag"
@@ -77,8 +92,11 @@ for ($i = 0; $i -lt 60 -and -not (Test-Path $ready); $i++) { Start-Sleep -Second
 Assert (Test-Path $ready) "Installer meldet Bereitschaft (LPTABREADY), bevor das Programm endet"
 Start-Sleep -Seconds 3
 Assert (-not $upd.HasExited) "Installer wartet auf das Beenden des Programms"
-# Das Programm beendet sich beim echten Update selbst – hier simuliert
+# Das Programm beendet sich beim echten Update selbst – hier hart beendet (wie ein Absturz)
 Stop-Process -Id $app.Id
+# Verwaiste Worker würden die Programmdateien sperren – sie müssen mit dem Programm enden
+for ($i = 0; $i -lt 40 -and @($workers | Where-Object { -not $_.HasExited }).Count -gt 0; $i++) { Start-Sleep -Milliseconds 250 }
+Assert (@($workers | Where-Object { -not $_.HasExited }).Count -eq 0) "Hintergrundprozesse enden mit dem Programm"
 $upd.WaitForExit(600000) | Out-Null
 Write-Host "  Update-Installer beendet mit Code $($upd.ExitCode)"
 Assert ($upd.ExitCode -eq 0) "Update-Installer-Exitcode 0"

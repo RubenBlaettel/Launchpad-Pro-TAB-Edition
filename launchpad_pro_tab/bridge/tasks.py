@@ -20,7 +20,7 @@ from typing import Any, Callable
 
 from PySide6.QtCore import QObject, Signal, Slot
 
-from ..audio.tasks import ping
+from ..audio.tasks import ping, worker_init
 
 log = logging.getLogger(__name__)
 
@@ -89,7 +89,8 @@ class TaskRunner(QObject):
         if self._pool is None:
             try:
                 ctx = multiprocessing.get_context("spawn")
-                self._pool = ProcessPoolExecutor(max_workers=self._workers, mp_context=ctx)
+                self._pool = ProcessPoolExecutor(max_workers=self._workers, mp_context=ctx,
+                                                 initializer=worker_init)
             except Exception as exc:
                 log.warning("Prozess-Pool nicht verfügbar (%s) – nutze Threads.", exc)
                 self._use_processes = False
