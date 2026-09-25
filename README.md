@@ -67,8 +67,9 @@ Master-Fader für die Windows-Systemlautstärke, ein **dunkles und ein helles De
 
 ### Windows (Installer)
 
-1. Auf der GitHub-Seite des Projekts unter **Releases** die neueste Version öffnen und
-   **`LaunchpadProTAB-Setup-<Version>.exe`** herunterladen.
+1. Auf der GitHub-Seite des Projekts unter **Releases** die neueste Version öffnen und unter
+   *Assets* **`LaunchpadProTAB-Setup-<Version>.exe`** herunterladen. (*Source code (zip)* fügt
+   GitHub automatisch hinzu – das ist nur der Quellcode, kein Installer.)
 2. Den Installer starten und dem Assistenten folgen:
 
 | Schritt | |

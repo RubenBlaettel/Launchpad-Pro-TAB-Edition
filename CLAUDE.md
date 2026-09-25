@@ -22,7 +22,9 @@ Kommentare, Doku: **Deutsch**. Aktuelle Version: siehe `launchpad_pro_tab/__init
   Installer-Bilder: `tools/make_installer_screenshots.py`).
 - Diese **CLAUDE.md** aktuell halten, **CHANGELOG.md** bei jeder Version ergänzen.
 - Entwicklungszweig bisher: `claude/launchpad-pro-tab-frontend-pqz33o` (Remote: GitHub
-  `RubenBlaettel/Launchpad-Pro-TAB-Edition`, Standardzweig `main`). PRs nur auf ausdrücklichen Wunsch.
+  `RubenBlaettel/Launchpad-Pro-TAB-Edition`, Standardzweig `main`, Repository öffentlich).
+  PRs nur auf ausdrücklichen Wunsch. v1.1 ist über PR #1 in `main` – für Folgearbeiten den Zweig
+  zuerst auf `origin/main` setzen.
 
 ### Entscheidungen aus Rückfragen
 
@@ -32,7 +34,7 @@ Kommentare, Doku: **Deutsch**. Aktuelle Version: siehe `launchpad_pro_tab/__init
 | Antippen einer laufenden Kachel (v1.0) | **Start/Stopp-Umschalter**, mehrere Kacheln parallel, Schleife je Kachel, „ALLES STOPPEN“ |
 | Tempo-Regler (v1.0) | **Tonhöhe bleibt erhalten** (Time-Stretch, WSOLA), 0,5×–2,0×, Rastpunkt 1,0× |
 | Update-Quelle (v1.1) | Repo war privat → Nutzer macht das **Repository öffentlich**; Updates direkt aus dessen GitHub-Releases (keine Tokens). |
-| Erstes Release (v1.1) | **v1.1.0 veröffentlichen** (Tag → Release-Workflow). |
+| Erstes Release (v1.1) | **v1.1.0 veröffentlicht** (25.09.2026): Nutzer hat PR #1 nach `main` gemergt und das Release in der GitHub-Oberfläche angelegt; `release.yml` hat die Assets angehängt. |
 
 ### Eigene Designentscheidungen (begründet, bei Bedarf mit Nutzer abstimmen)
 
@@ -277,6 +279,12 @@ räumt `updater.cleanup()` Downloads und `.alt-*`-Ordner weg; `Backend._announce
   der Server bestätigt jeden Auftrag (`ok`), damit keine Daten beim schnellen Beenden verloren gehen.
 - Inno: Die Selbst-Erhöhung (UAC) passiert **vor** `[Code]` – `InitializeSetup` läuft nur im
   erhöhten Prozess; lehnt man UAC ab, endet Setup mit `ecCancelledBeforeInstall`.
+- Release v1.1.0: Das Repository wurde genau während `gh release upload` von privat auf öffentlich
+  umgestellt → HTTP 403 „Resource not accessible by integration“ trotz `contents: write`. Sichtbarkeit
+  nie während eines Release-Laufs ändern; Abhilfe: *Actions › Release › Re-run failed jobs*
+  (nur „Release veröffentlichen“ läuft neu, die gebauten Pakete werden wiederverwendet).
+- GitHub hängt an jedes Release automatisch *Source code (zip/tar.gz)* an – Nutzer halten das leicht
+  für das Programm (der Release-Text weist deshalb darauf hin).
 
 ## 6. Teststrategie
 
@@ -327,7 +335,10 @@ und im Workflow per Secret bereitstellen – beseitigt die SmartScreen-Warnung.
   (Installation nach `C:\Program Files`, Verknüpfungen, Registry, Smoke-Test der installierten EXE,
   Update bei laufendem Programm inkl. `LPTABREADY`, Worker enden nach hartem Beenden, Neustart,
   Deinstallation mit Datenlöschung); Linux-Paket auf Ubuntu 22.04 grün.
-- Release v1.1.0: noch nicht veröffentlicht – Tag muss der Nutzer setzen (siehe Abschnitt 7).
+- Release v1.1.0 (25.09.2026): Workflow grün (Tests, Windows-Installer-E2E, Linux-Paket); Assets
+  `LaunchpadProTAB-Setup-1.1.0.exe`, `LaunchpadProTAB-1.1.0-linux-x86_64.tar.gz`, `SHA256SUMS.txt`.
+  Update-Prüfung gegen das echte Release geprüft: installiert 1.1.0 → „aktuell“, 1.0.0 → Angebot
+  1.1.0 mit passendem Paket und Prüfsumme (GitHub-Digest = SHA256SUMS).
 - Nicht automatisch prüfbar (auf echter Hardware testen!): tatsächliche Ausgabelatenz mit WASAPI,
   Windows-Systemlautstärke per pycaw auf einem Rechner mit Audiogerät, Touch-Bedienung auf einem
   echten Touchscreen, native Datei-Dialoge, UAC-Abfrage beim Update (CI-Runner hat keine UAC),
