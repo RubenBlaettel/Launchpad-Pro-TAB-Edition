@@ -397,8 +397,11 @@ Installer-E2E-Test (prüft Signatur von EXE und `unins000.exe`) → Release.
   App-Steuerung, Fehler 4551) → Zustimmungsfrage, MIT-Lizenz und SignPath-Signierung vorbereitet.
   Lokal: Zwei-Durchlauf-Signatur unter Wine mit Test-Zertifikat komplett geprüft (sammeln → signieren
   → einsetzen → 2. Durchlauf übernimmt Deinstaller-Signatur → Setup signiert → Installation, Dateien
-  signiert, fremd signierte behalten ihre Signatur). SignPath-Antrag stellt der Nutzer
-  (`docs/SIGNPATH.md`); Signatur mit echtem Zertifikat noch ungetestet.
+  signiert, fremd signierte behalten ihre Signatur). CI #13 (3d44501, Windows, `SIGNATUR=test`):
+  kompletter Ablauf grün – signierte PyInstaller-EXE startet (Smoke-Test), Installer-E2E meldet
+  „Signatur: LaunchpadProTAB.exe/unins000.exe“, Update + Deinstallation ok. SignPath-Antrag stellt der
+  Nutzer (`docs/SIGNPATH.md`); Signatur mit echtem Zertifikat und die SignPath-Action selbst sind
+  noch ungetestet (Eingaben der Action aus dem Gedächtnis – beim ersten echten Lauf prüfen).
 - Nicht automatisch prüfbar (auf echter Hardware testen!): tatsächliche Ausgabelatenz mit WASAPI,
   Windows-Systemlautstärke per pycaw auf einem Rechner mit Audiogerät, Touch-Bedienung auf einem
   echten Touchscreen, native Datei-Dialoge, UAC-Abfrage beim Update (CI-Runner hat keine UAC),
