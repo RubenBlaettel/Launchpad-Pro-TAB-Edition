@@ -586,8 +586,11 @@ Weitere Hinweise für die Weiterentwicklung (auch mit Claude Code) stehen in [`C
    git push origin v1.2.0
    ```
 
-   (Alternativ auf GitHub unter *Actions › Release › Run workflow* – dann wird die Version aus dem
-   Code verwendet.)
+   Ohne git auf dem eigenen Rechner geht das auch auf GitHub: *Releases › Draft a new release* →
+   bei *Choose a tag* `v1.2.0` eintippen und *Create new tag on publish* wählen, als *Target* den
+   Zweig mit dem Code auswählen, Titel z. B. „Launchpad Pro TAB Edition 1.2.0“ → *Publish release*.
+   Der Workflow ergänzt anschließend Installer, Linux-Paket, Prüfsummen und Versionshinweise.
+   (Sobald der Workflow im Standardzweig liegt, geht es auch über *Actions › Release › Run workflow*.)
 4. Der Workflow **Release** baut Windows-Installer und Linux-Paket, testet beide, erstellt die
    Prüfsummen (`SHA256SUMS.txt`) und veröffentlicht das GitHub-Release. Versionen mit Buchstaben
    (z. B. `1.3.0-beta.1`) werden als **Vorabversion** veröffentlicht und nur Programmen angeboten,

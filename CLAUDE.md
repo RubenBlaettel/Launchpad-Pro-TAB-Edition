@@ -304,6 +304,11 @@ räumt `updater.cleanup()` Downloads und `.alt-*`-Ordner weg; `Backend._announce
 2. Commit + Push, CI grün abwarten.
 3. `git tag vX.Y.Z && git push origin vX.Y.Z` → `release.yml` baut/testet alles, erzeugt
    `SHA256SUMS.txt` und das Release (Buchstaben in der Version → Vorabversion).
+   Ohne lokales git: GitHub › *Releases › Draft a new release* → Tag `vX.Y.Z` neu anlegen, *Target* =
+   Zweig mit dem Code, *Publish release* → `release.yml` hängt Assets + Versionshinweise an.
+   **Claude-Code-Web-Sitzungen dürfen nur den Entwicklungszweig pushen** (Tag-Push → HTTP 403;
+   `Run workflow` für `release.yml` → 404, solange die Datei nicht im Standardzweig liegt) → den Tag
+   setzt dann der Nutzer.
 4. Assets: `LaunchpadProTAB-Setup-X.Y.Z.exe`, `LaunchpadProTAB-X.Y.Z-linux-x86_64.tar.gz`, `SHA256SUMS.txt`.
 5. Repository muss **öffentlich** sein, sonst liefert die GitHub-API 404 („Keine veröffentlichten Versionen“).
 
@@ -313,10 +318,16 @@ und im Workflow per Secret bereitstellen – beseitigt die SmartScreen-Warnung.
 ## 8. Stand der Prüfungen
 
 - v1.0: siehe Git-Historie (CI grün, EXE-Smoke-Test).
-- v1.1 (lokal, Linux-Container): alle Tests grün, `--smoke-test` grün (Quellcode + Linux-Paket),
+- v1.1 (lokal, Linux-Container): 84 Tests grün, `--smoke-test` grün (Quellcode + Linux-Paket),
   `tools/test_linux_package.sh` grün (Installation, Update-Tausch, Deinstallation mit Datenlöschung),
-  mitgeliefertes PortAudio lädt ohne System-PortAudio; Installer mit Inno Setup 7.1 unter Wine
-  kompiliert, still installiert/deinstalliert, Wartungsseite + Lösch-Dialog geprüft.
+  mitgeliefertes PortAudio lädt ohne System-PortAudio, gepacktes Programm hart beendet → keine
+  verwaisten Worker; Installer mit Inno Setup 7.1 unter Wine kompiliert, still installiert/
+  deinstalliert, Wartungsseite, Lösch-Dialog und Warten auf freie Programmdatei geprüft.
+- v1.1 (GitHub Actions, Commit fc13153): Tests Linux + Windows grün; Windows-Installer echt geprüft
+  (Installation nach `C:\Program Files`, Verknüpfungen, Registry, Smoke-Test der installierten EXE,
+  Update bei laufendem Programm inkl. `LPTABREADY`, Worker enden nach hartem Beenden, Neustart,
+  Deinstallation mit Datenlöschung); Linux-Paket auf Ubuntu 22.04 grün.
+- Release v1.1.0: noch nicht veröffentlicht – Tag muss der Nutzer setzen (siehe Abschnitt 7).
 - Nicht automatisch prüfbar (auf echter Hardware testen!): tatsächliche Ausgabelatenz mit WASAPI,
   Windows-Systemlautstärke per pycaw auf einem Rechner mit Audiogerät, Touch-Bedienung auf einem
   echten Touchscreen, native Datei-Dialoge, UAC-Abfrage beim Update (CI-Runner hat keine UAC),
