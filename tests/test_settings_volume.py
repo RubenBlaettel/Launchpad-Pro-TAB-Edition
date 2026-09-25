@@ -65,3 +65,23 @@ def test_master_volume_controller(qapp):
         assert abs(ctrl.volume - 0.8) < 1e-3
     finally:
         ctrl.shutdown()
+
+
+def test_task_runner_falls_back_to_threads(qapp):
+    """Fallen die Worker-Prozesse aus, wird im Thread wiederholt und später dauerhaft umgeschaltet."""
+    import _crashy
+    from conftest import wait_until
+
+    from launchpad_pro_tab.bridge.tasks import TaskRunner
+
+    runner = TaskRunner(use_processes=True)
+    results: list = []
+    try:
+        for expected in (1, 2, 3):
+            runner.submit_process(_crashy.crash_in_worker, on_done=results.append, on_error=results.append)
+            assert wait_until(qapp, lambda: len(results) == expected, 60)
+            assert results[-1] == 42
+        assert not runner.uses_processes
+        assert runner.pending == 0
+    finally:
+        runner.shutdown()

@@ -20,6 +20,19 @@ from .dsp import apply_edge_fades, soft_limit
 from .timestretch import stretch
 
 
+def ping() -> int:
+    """Startet einen Worker vorab (Import von soundfile/av/soxr), ohne Qt zu laden.
+
+    Dadurch ist die erste echte Dekodierung nicht durch Bibliotheks-Importe verzögert.
+    """
+    for module in ("soundfile", "av", "soxr"):
+        try:
+            __import__(module)
+        except Exception:  # fehlt ein Backend, meldet es sich später beim Dekodieren
+            pass
+    return os.getpid()
+
+
 def prepare(src: str, cache_dir: str, samplerate: int) -> dict:
     """Stellt sicher, dass ``src`` dekodiert im Cache liegt. Liefert den Cache-Eintrag."""
     entry = cache.ensure(Path(cache_dir), Path(src), int(samplerate))
