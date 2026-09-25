@@ -27,6 +27,8 @@ Update-Dialog des Programms angezeigt.
 ### Verbessert
 
 - Einstellungs- und Projektdateien werden auch mit BOM (z. B. vom Windows-Editor) gelesen.
+- Hintergrundprozesse (Dekodieren, Rendern) beenden sich jetzt auch dann, wenn das Programm
+  abstürzt oder hart beendet wird – sie blockieren keine Programmdateien mehr.
 
 ## [1.0.0] – 2026-09-25
 
