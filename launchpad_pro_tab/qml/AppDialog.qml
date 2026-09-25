@@ -21,7 +21,7 @@ Popup {
     padding: 0
     closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
 
-    Overlay.modal: Rectangle { color: "#B3000000" }
+    Overlay.modal: Rectangle { color: Theme.scrim }
 
     enter: Transition {
         ParallelAnimation {

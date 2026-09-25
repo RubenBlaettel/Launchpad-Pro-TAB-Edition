@@ -160,6 +160,17 @@ class TaskRunner(QObject):
             except Exception:
                 log.exception("Fehler im Fehler-Callback")
 
+    def stop_processes(self) -> None:
+        """Beendet die Worker-Prozesse und wartet darauf (z. B. vor einem Update, damit
+        keine Programmdateien mehr in Benutzung sind). Weitere Aufgaben laufen in Threads."""
+        self._use_processes = False
+        pool, self._pool = self._pool, None
+        if pool is not None:
+            try:
+                pool.shutdown(wait=True, cancel_futures=True)
+            except Exception:  # noqa: BLE001
+                log.exception("Worker-Prozesse ließen sich nicht sauber beenden")
+
     def shutdown(self) -> None:
         self._threads.shutdown(wait=False, cancel_futures=True)
         self._discard_pool()

@@ -29,7 +29,7 @@ Rectangle {
         GradientStop { position: 0; color: Theme.faderStripLight }
         GradientStop { position: 1; color: Theme.faderStrip }
     }
-    border.color: "#555A64"
+    border.color: Theme.faderBorder
     opacity: enabled ? 1 : 0.45
 
     function dbToGain(d) { return Math.pow(10, d / 20) }
@@ -45,7 +45,7 @@ Rectangle {
         anchors.bottomMargin: 6
         radius: 4
         color: Theme.faderTrack
-        border.color: "#1B1C20"
+        border.color: Theme.faderTrackBorder
 
         readonly property real capH: 26
         readonly property real travel: height - capH - 12
@@ -151,7 +151,7 @@ Rectangle {
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
             text: Math.round(fader.value * 100) + " %"
-            color: "#FFFFFF"
+            color: Theme.faderText
             font.family: Theme.fontFamily
             font.pixelSize: 15
             font.weight: Font.Bold
@@ -160,7 +160,7 @@ Rectangle {
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
             text: (fader.db >= 0 ? "+" : "") + fader.db.toFixed(1).replace(".", ",") + " dB"
-            color: Theme.faderScale
+            color: Theme.faderTextDim
             font.family: Theme.fontFamily
             font.pixelSize: 10
             font.features: { "tnum": 1 }
@@ -169,7 +169,7 @@ Rectangle {
             anchors.horizontalCenter: parent.horizontalCenter
             topPadding: 3
             text: fader.label
-            color: "#E3E6EA"
+            color: Theme.faderLabel
             font.family: Theme.fontFamily
             font.pixelSize: 10
             font.weight: Font.Bold

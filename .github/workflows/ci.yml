@@ -2,65 +2,10 @@ name: CI
 
 on:
   push:
+    branches: ["**"]     # Tags lösen stattdessen release.yml aus
   pull_request:
   workflow_dispatch:
 
 jobs:
-  tests:
-    name: Tests (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-    env:
-      QT_QPA_PLATFORM: offscreen
-      PYTHONUTF8: "1"
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
-        with:
-          python-version: "3.12"
-          cache: pip
-      - name: Systembibliotheken (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libegl1 libgl1 libxkbcommon0 libfontconfig1 libdbus-1-3 libportaudio2
-      - name: Abhängigkeiten installieren
-        run: python -m pip install -r requirements-dev.txt
-      - name: Tests
-        run: python -m pytest -q
-      - name: Smoke-Test (Quellcode)
-        run: python -m launchpad_pro_tab --smoke-test
-
-  windows-exe:
-    name: Windows-Programm (.exe)
-    needs: tests
-    runs-on: windows-latest
-    env:
-      PYTHONUTF8: "1"
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
-        with:
-          python-version: "3.12"
-          cache: pip
-      - name: Abhängigkeiten installieren
-        run: python -m pip install -r requirements-dev.txt
-      - name: EXE bauen (PyInstaller)
-        run: pyinstaller packaging/launchpad_pro_tab.spec --noconfirm
-      - name: Smoke-Test der EXE
-        shell: pwsh
-        env:
-          QT_QPA_PLATFORM: offscreen
-        run: |
-          $p = Start-Process -FilePath "dist\LaunchpadProTAB\LaunchpadProTAB.exe" -ArgumentList "--smoke-test" -Wait -PassThru
-          Get-Content "$env:APPDATA\LaunchpadProTAB\launchpad.log" -ErrorAction SilentlyContinue | Select-Object -Last 20
-          if ($p.ExitCode -ne 0) { Write-Error "Smoke-Test fehlgeschlagen (Code $($p.ExitCode))"; exit 1 }
-      - name: Programmordner hochladen
-        uses: actions/upload-artifact@v4
-        with:
-          name: LaunchpadProTAB-Windows
-          path: dist/LaunchpadProTAB
-          retention-days: 30
+  build:
+    uses: ./.github/workflows/build.yml

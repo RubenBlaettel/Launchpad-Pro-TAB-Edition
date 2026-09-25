@@ -9,7 +9,7 @@ T.AbstractButton {
     property string iconName: ""
     property string variant: "solid"
     property int iconSize: 20
-    property color tint: variant === "accent" ? "#05140E" : (variant === "danger" ? "#FFFFFF" : Theme.text)
+    property color tint: variant === "accent" ? Theme.onAccent : (variant === "danger" ? "#FFFFFF" : Theme.text)
     property bool active: false          // z. B. für Umschalter
     property color activeColor: Theme.accent
     property string toolTipText: ""

@@ -49,7 +49,7 @@ T.AbstractButton {
             anchors.rightMargin: 12
             anchors.verticalCenter: parent.verticalCenter
             width: 50; height: 28; radius: 14
-            color: control.checked ? Theme.accent : "#2B303B"
+            color: control.checked ? Theme.accent : Theme.switchOff
             Behavior on color { ColorAnimation { duration: 120 } }
             Rectangle {
                 width: 22; height: 22; radius: 11

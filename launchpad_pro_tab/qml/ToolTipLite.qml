@@ -18,7 +18,7 @@ Item {
         width: label.implicitWidth + 16
         height: label.implicitHeight + 10
         radius: 6
-        color: "#E6000000"
+        color: Theme.popup
         border.color: Theme.border
         Text {
             id: label

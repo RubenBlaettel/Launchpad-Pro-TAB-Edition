@@ -21,6 +21,9 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 _CFG = Path(tempfile.mkdtemp(prefix="lptab-test-cfg-"))
 os.environ["LPTAB_CONFIG_DIR"] = str(_CFG)
 os.environ["LPTAB_PROJECTS_DIR"] = str(_CFG / "Projekte")
+os.environ["LPTAB_CACHE_DIR"] = str(_CFG / "Cache")
+# Update-Prüfung nie gegen das echte GitHub (Tests setzen bei Bedarf einen lokalen Server)
+os.environ["LPTAB_UPDATE_URL"] = "http://127.0.0.1:9/keine-updates"
 
 SR = 48000
 

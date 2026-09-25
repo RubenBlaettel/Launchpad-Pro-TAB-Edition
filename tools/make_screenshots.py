@@ -142,6 +142,18 @@ def main() -> int:
     grab("06_bearbeiten.png", crop="editorSection", margin=6)
     grab("07_master.png", crop="masterSection", margin=6)
     grab("08_raster.png", crop="tileGrid", margin=10)
+
+    # Heller Modus (gleiche Situation)
+    backend.setThemeMode("light")
+    wait(600)
+    grab("12_hauptansicht_hell.png")
+    grab("13_bearbeiten_hell.png", crop="editorSection", margin=6)
+    call("tileMenu", "openFor", 10)
+    grab("14_kachelmenue_hell.png")
+    call("tileMenu", "close")
+    wait(300)
+    backend.setThemeMode("dark")
+    wait(300)
     editor.pause()
 
     call("tileMenu", "openFor", 10)
@@ -159,7 +171,7 @@ def main() -> int:
     call("openDialog", "close")
     wait(300)
 
-    call("settingsDialog", "open")
+    call("settingsDialog", "openPage", 0)
     grab("11_einstellungen.png")
     call("settingsDialog", "close")
     wait(300)
@@ -177,6 +189,44 @@ def main() -> int:
     wait(1200)
     grab("09_show_modus.png")
     backend.setShowMode(False)
+
+    # ------------------------------------------------------------------ Update-Hinweis
+    # Simuliertes Release 1.2.0 (keine Netzwerkverbindung nötig), Darstellung wie unter Windows
+    from datetime import datetime, timezone
+
+    from launchpad_pro_tab.update.install import InstallKind
+    from launchpad_pro_tab.update.releases import Asset, Release
+    from launchpad_pro_tab.update.version import parse_version
+
+    notes = (
+        "## Neu in 1.2.0\n\n"
+        "- **Cue-Liste:** Kacheln in eine feste Reihenfolge bringen und mit der Leertaste weiterschalten\n"
+        "- **Fade-in/Fade-out** je Kachel einstellbar\n"
+        "- Exklusiv-Gruppen: eine Kachel stoppt automatisch die anderen der Gruppe\n\n"
+        "## Verbesserungen\n\n"
+        "- Schnelleres Laden großer Projekte\n"
+        "- Behoben: Coverbild wurde nach dem Umbenennen nicht aktualisiert\n"
+    )
+    release = Release(
+        version=parse_version("1.2.0"), tag="v1.2.0", title="Launchpad Pro TAB Edition 1.2.0", notes=notes,
+        html_url="https://github.com/RubenBlaettel/Launchpad-Pro-TAB-Edition/releases/tag/v1.2.0",
+        published=datetime(2026, 10, 12, 18, 0, tzinfo=timezone.utc), prerelease=False,
+        assets=[Asset("LaunchpadProTAB-Setup-1.2.0.exe", "https://example.invalid/setup.exe", 118_400_000, "0" * 64)],
+    )
+    updater = backend.updater
+    updater._kind = InstallKind.WINDOWS_INSTALLER
+    updater._manual = False
+    updater._checked([release])
+    wait(700)
+    grab("15_update_hinweis.png")
+    call("updateDialog", "open")
+    grab("16_update_dialog.png")
+    call("updateDialog", "close")
+    wait(300)
+    call("settingsDialog", "openPage", 2)
+    grab("17_einstellungen_updates.png")
+    call("settingsDialog", "close")
+    wait(300)
 
     editor.cancel()
     backend.stopAll()

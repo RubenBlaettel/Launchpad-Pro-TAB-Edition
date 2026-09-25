@@ -16,6 +16,7 @@ log = logging.getLogger(__name__)
 SETTINGS_FILE = "einstellungen.json"
 MAX_RECENT_PROJECTS = 20
 MAX_RECENT_AUDIO = 100
+THEME_MODES = ("dark", "light", "system")
 
 
 @dataclass
@@ -29,6 +30,12 @@ class AppSettings:
     stop_fade_ms: float = STOP_FADE_MS_DEFAULT
     projects_dir: str | None = None
     window: dict[str, Any] = field(default_factory=dict)
+    theme: str = "dark"                  # "dark" | "light" | "system"
+    update_auto_check: bool = True       # beim Start nach Updates suchen
+    update_prereleases: bool = False     # auch Vorabversionen (Beta) anbieten
+    update_skipped: str | None = None    # "Diese Version überspringen"
+    update_last_check: str | None = None
+    last_version: str | None = None      # zuletzt gestartete Programmversion
 
     _path: Path | None = field(default=None, repr=False, compare=False)
 
@@ -73,6 +80,13 @@ class AppSettings:
             self.stop_fade_ms = float(self.stop_fade_ms)
         except (TypeError, ValueError):
             self.stop_fade_ms = STOP_FADE_MS_DEFAULT
+        if self.theme not in THEME_MODES:
+            self.theme = "dark"
+        self.update_auto_check = bool(self.update_auto_check)
+        self.update_prereleases = bool(self.update_prereleases)
+        for key in ("update_skipped", "update_last_check", "last_version"):
+            if not isinstance(getattr(self, key), (str, type(None))):
+                setattr(self, key, None)
 
     # ------------------------------------------------------------------
     def remember_project(self, path: Path, name: str) -> None:

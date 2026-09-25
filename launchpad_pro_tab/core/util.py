@@ -100,7 +100,8 @@ def atomic_write_json(path: Path, data: Any) -> None:
 
 
 def read_json(path: Path) -> Any:
-    with open(path, "r", encoding="utf-8") as fh:
+    # "utf-8-sig": auch Dateien mit BOM lesen (z. B. von Hand mit dem Windows-Editor bearbeitet)
+    with open(path, "r", encoding="utf-8-sig") as fh:
         return json.load(fh)
 
 

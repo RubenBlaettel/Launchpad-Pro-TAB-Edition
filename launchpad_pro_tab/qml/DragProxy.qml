@@ -11,7 +11,7 @@ Rectangle {
     width: Math.min(300, labelText.implicitWidth + 56)
     height: 46
     radius: 10
-    color: "#F0181B23"
+    color: Theme.popup
     border.color: Theme.accent
     border.width: 2
     visible: dragging

@@ -55,8 +55,8 @@ Item {
                         width: parent.parent.width - 16
                         height: 8
                         radius: 2
-                        color: "#0B0C0F"
-                        border.color: "#1E2128"
+                        color: Theme.meterBg
+                        border.color: Theme.meterBorder
                         readonly property real frac: index === 0 ? meter.shownL : meter.shownR
                         readonly property real hold: index === 0 ? meter.holdL : meter.holdR
                         Rectangle {
@@ -78,7 +78,7 @@ Item {
                             y: 1
                             width: 2
                             height: parent.height - 2
-                            color: bar.hold > 0.95 ? Theme.meterRed : "#FFFFFF"
+                            color: bar.hold > 0.95 ? Theme.meterRed : Theme.meterHold
                         }
                     }
                 }
@@ -90,7 +90,7 @@ Item {
             height: 20
             radius: 4
             anchors.verticalCenter: parent.verticalCenter
-            color: meter.limiting ? Theme.meterRed : "#15171C"
+            color: meter.limiting ? Theme.meterRed : Theme.ledOff
             border.color: meter.limiting ? "#FF8A8A" : Theme.border
             Text {
                 anchors.centerIn: parent

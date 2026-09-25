@@ -196,7 +196,7 @@ AppDialog {
                         width: 40; height: 40; radius: 20
                         color: modelData
                         border.width: selected ? 3 : 1
-                        border.color: selected ? "#FFFFFF" : Qt.darker(modelData, 1.5)
+                        border.color: selected ? Theme.swatchRing : Qt.darker(modelData, 1.5)
                         scale: sTap.pressed ? 0.9 : 1
                         Icon { anchors.centerIn: parent; visible: parent.selected; name: "check"; size: 18; color: "#10131A" }
                         TapHandler { id: sTap; onTapped: backend.setTileColor(menu.tileIndex, modelData) }

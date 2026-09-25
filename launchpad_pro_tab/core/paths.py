@@ -28,6 +28,27 @@ def config_dir() -> Path:
     return path
 
 
+def cache_dir() -> Path:
+    """Ordner für heruntergeladene Updates u. Ä. (lokal, nicht servergespeichert).
+
+    Windows: ``%LOCALAPPDATA%\\LaunchpadProTAB``, Linux: ``~/.cache/launchpad-pro-tab``.
+    Über ``LPTAB_CACHE_DIR`` überschreibbar (Tests).
+    """
+    override = os.environ.get("LPTAB_CACHE_DIR")
+    if override:
+        path = Path(override)
+    elif sys.platform == "win32":
+        base = os.environ.get("LOCALAPPDATA") or str(Path.home() / "AppData" / "Local")
+        path = Path(base) / __app_id__
+    elif sys.platform == "darwin":
+        path = Path.home() / "Library" / "Caches" / __app_id__
+    else:
+        base = os.environ.get("XDG_CACHE_HOME") or str(Path.home() / ".cache")
+        path = Path(base) / "launchpad-pro-tab"
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
 def default_documents_dir() -> Path:
     """Fallback, falls Qt (QStandardPaths) keinen Dokumente-Ordner liefert."""
     home = Path.home()

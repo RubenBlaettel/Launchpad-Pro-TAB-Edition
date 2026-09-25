@@ -52,12 +52,18 @@ def setup_logging(verbose: bool = False) -> Path:
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
     p = argparse.ArgumentParser(prog="launchpad-pro-tab", description=__app_name__)
+    p.add_argument("path", nargs="?", help="Projektordner, projekt.lptab oder Export-ZIP (z. B. per Doppelklick)")
     p.add_argument("--project", help="Projektordner, projekt.lptab oder Export-ZIP öffnen")
     p.add_argument("--no-audio", action="store_true", help="ohne Soundkarte starten (stumm)")
     p.add_argument("--fullscreen", action="store_true", help="im Vollbild starten (Touch-Terminal)")
     p.add_argument("--verbose", action="store_true", help="ausführliches Protokoll")
     p.add_argument("--smoke-test", action="store_true",
                    help="Selbsttest: Oberfläche laden, kurz laufen lassen, beenden (Exit-Code 0 = OK)")
+    p.add_argument("--no-update-check", action="store_true", help="beim Start nicht nach Updates suchen")
+    p.add_argument("--wait-pid", type=int, default=0, help=argparse.SUPPRESS)   # nach einem Update
+    p.add_argument("--purge-user-data", action="store_true",
+                   help="alle Projekte und Einstellungen löschen (Deinstallation); ohne --yes nur anzeigen")
+    p.add_argument("--yes", action="store_true", help="Rückfrage bei --purge-user-data überspringen")
     p.add_argument("--version", action="version", version=f"{__app_name__} {__version__}")
     args, _unknown = p.parse_known_args(argv[1:])
     return args
@@ -91,6 +97,21 @@ class AppContext:
         roots = self.qml.rootObjects() if self.qml is not None else []
         return roots[0] if roots else None
 
+    def handle_instance_message(self, payload: dict) -> None:
+        """Zweiter Programmstart: Fenster nach vorne holen, ggf. Projekt öffnen."""
+        win = self.window
+        if win is not None:
+            from PySide6.QtGui import QWindow
+
+            if win.visibility() == QWindow.Visibility.Minimized:
+                win.showMaximized()
+            win.show()
+            win.raise_()
+            win.requestActivate()
+        project = payload.get("project") if isinstance(payload, dict) else None
+        if project and Path(project).exists():
+            self.backend.openProject(project)
+
     def dispose(self) -> None:
         """Oberfläche vor dem Backend abbauen (sonst werten QML-Bindungen gelöschte Objekte aus)."""
         import shiboken6
@@ -104,19 +125,28 @@ class AppContext:
             self.qml = None
 
 
-def create_app(argv: list[str], *, no_audio: bool = False, fullscreen: bool = False,
-               use_processes: bool = True) -> AppContext:
-    os.environ.setdefault("QT_QUICK_CONTROLS_STYLE", "Basic")
-    from PySide6.QtCore import QStandardPaths, Qt, QUrl
-    from PySide6.QtGui import QFont, QGuiApplication, QIcon
-    from PySide6.QtQml import QQmlApplicationEngine
-    from PySide6.QtQuick import QQuickWindow  # noqa: F401 – Typ für rootObjects()
-    from PySide6.QtQuickControls2 import QQuickStyle
+def make_qapp(argv: list[str]):
+    """Die (einzige) QGuiApplication anlegen bzw. die vorhandene liefern."""
+    from PySide6.QtCore import Qt
+    from PySide6.QtGui import QGuiApplication
 
     app = QGuiApplication.instance()
     if app is None:
         QGuiApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
         app = QGuiApplication(argv)
+    return app
+
+
+def create_app(argv: list[str], *, no_audio: bool = False, fullscreen: bool = False,
+               use_processes: bool = True, check_updates: bool = False) -> AppContext:
+    os.environ.setdefault("QT_QUICK_CONTROLS_STYLE", "Basic")
+    from PySide6.QtCore import QStandardPaths, QUrl
+    from PySide6.QtGui import QFont, QIcon
+    from PySide6.QtQml import QQmlApplicationEngine
+    from PySide6.QtQuick import QQuickWindow  # noqa: F401 – Typ für rootObjects()
+    from PySide6.QtQuickControls2 import QQuickStyle
+
+    app = make_qapp(argv)
     app.setApplicationName(__app_name__)
     app.setApplicationDisplayName(__app_name__)
     app.setOrganizationName(__organization__)
@@ -154,6 +184,7 @@ def create_app(argv: list[str], *, no_audio: bool = False, fullscreen: bool = Fa
     ctx.setContextProperty("backend", backend)
     ctx.setContextProperty("editor", backend.editor)
     ctx.setContextProperty("master", backend.master)
+    ctx.setContextProperty("updater", backend.updater)
     ctx.setContextProperty("appVersion", __version__)
     ctx.setContextProperty("appFontFamily", family)
     ctx.setContextProperty("logFile", str(config_dir() / "launchpad.log"))
@@ -163,17 +194,29 @@ def create_app(argv: list[str], *, no_audio: bool = False, fullscreen: bool = Fa
     if not qml.rootObjects():
         backend.shutdown()
         raise RuntimeError("Die Oberfläche konnte nicht geladen werden (siehe Protokoll).")
-    backend.start()
+    backend.start(check_updates=check_updates)
     app.aboutToQuit.connect(backend.shutdown)
     if engine.error:
         backend.notify(f"Keine Audioausgabe verfügbar: {engine.error}", "error")
     return context
 
 
+def _requested_project(args: argparse.Namespace) -> str | None:
+    """Projekt aus ``--project`` oder dem Dateipfad (Doppelklick auf eine .lptab-Datei)."""
+    for raw in (args.project, args.path):
+        if raw and Path(raw).exists():
+            return str(Path(raw).resolve())
+    return None
+
+
 def main(argv: list[str] | None = None) -> int:
     multiprocessing.freeze_support()
     argv = list(sys.argv if argv is None else argv)
+    if "--finish-update" in argv:
+        return finish_update(argv)
     args = parse_args(argv)
+    if args.purge_user_data:
+        return purge_user_data(confirmed=args.yes)
     setup_logging(args.verbose)
     log.info("%s %s startet (Python %s, %s)", __app_name__, __version__, sys.version.split()[0], sys.platform)
 
@@ -183,20 +226,104 @@ def main(argv: list[str] | None = None) -> int:
     if args.smoke_test:
         return smoke_test(argv)
 
+    if args.wait_pid:
+        from .update.install import wait_for_pid
+
+        wait_for_pid(args.wait_pid, timeout=30)
+
+    from .bridge.single_instance import SingleInstance
+    from .system import integration
+
+    integration.set_app_user_model_id()
+    make_qapp(argv)
+    requested = _requested_project(args)
+    instance = SingleInstance()
+    if instance.forward({"action": "activate", "project": requested or ""}):
+        log.info("Launchpad Pro läuft bereits – Auftrag an die laufende Instanz übergeben.")
+        return 0
+    instance.listen()
+    integration.create_instance_mutex()
+
     try:
-        ctx = create_app(argv, no_audio=args.no_audio, fullscreen=args.fullscreen)
+        ctx = create_app(argv, no_audio=args.no_audio, fullscreen=args.fullscreen,
+                         check_updates=not args.no_update_check)
     except RuntimeError as exc:
         log.critical("%s", exc)
         return 1
+    instance.messageReceived.connect(ctx.handle_instance_message)
 
-    project = args.project or ctx.settings.last_project
+    project = requested or ctx.settings.last_project
     if project and Path(project).exists():
         ctx.backend.openProject(project)
 
     rc = ctx.app.exec()
+    instance.close()
     ctx.dispose()
     log.info("Beendet (Code %s)", rc)
     return rc
+
+
+def purge_user_data(confirmed: bool) -> int:
+    """``--purge-user-data``: Projekte + Einstellungen löschen (vom Deinstaller aufgerufen).
+
+    Läuft ohne Oberfläche. Ohne ``--yes`` wird nur angezeigt, was gelöscht würde.
+    Ein Protokoll landet im Temp-Ordner (``launchpad-pro-tab-entfernen.log``).
+    """
+    import tempfile
+
+    from .core.purge import execute_purge, plan_purge
+
+    documents = None
+    qt_dirs: list[Path] = []
+    try:
+        from PySide6.QtCore import QCoreApplication, QStandardPaths
+
+        QCoreApplication.setOrganizationName(__organization__)
+        QCoreApplication.setApplicationName(__app_name__)
+        loc = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.DocumentsLocation)
+        documents = Path(loc) if loc else None
+        for kind in (QStandardPaths.StandardLocation.CacheLocation, QStandardPaths.StandardLocation.AppLocalDataLocation):
+            loc = QStandardPaths.writableLocation(kind)
+            if loc:
+                qt_dirs.append(Path(loc))      # z. B. QML-Cache von Qt
+    except Exception:  # noqa: BLE001
+        pass
+    plan = plan_purge(documents=documents, extra_dirs=qt_dirs)
+    lines = plan.describe()
+    if not confirmed:
+        print("Folgende Daten würden gelöscht (mit --yes ausführen):")
+        print("\n".join(f"  {line}" for line in lines) or "  (nichts gefunden)")
+        return 0
+    report = execute_purge(plan)
+    try:
+        log_file = Path(tempfile.gettempdir()) / "launchpad-pro-tab-entfernen.log"
+        log_file.write_text(
+            "Gelöscht:\n" + "\n".join(report.deleted)
+            + "\n\nBehalten (enthielt fremde Dateien):\n" + "\n".join(report.kept)
+            + "\n\nFehler:\n" + "\n".join(report.errors) + "\n",
+            encoding="utf-8",
+        )
+    except OSError:
+        pass
+    if sys.stdout is not None:
+        print(f"{len(report.deleted)} Einträge gelöscht, {len(report.kept)} behalten, {len(report.errors)} Fehler.")
+    return 0 if not report.errors else 1
+
+
+def finish_update(argv: list[str]) -> int:
+    """Hilfsprozess der neuen Version nach einem Linux-Update (siehe ``update.install``)."""
+    from .update.install import finish_linux_update
+
+    try:
+        i = argv.index("--finish-update")
+        install_dir = Path(argv[i + 1])
+        wait_pid = int(argv[argv.index("--wait-pid") + 1]) if "--wait-pid" in argv else 0
+    except (ValueError, IndexError):
+        return 2
+    restart = argv[argv.index("--") + 1:] if "--" in argv else []
+    logging.basicConfig(filename=str(config_dir() / "update.log"), level=logging.INFO,
+                        format="%(asctime)s %(levelname)-7s %(name)s: %(message)s")
+    return finish_linux_update(install_dir, wait_pid, restart)
 
 
 def smoke_test(argv: list[str]) -> int:

@@ -82,7 +82,7 @@ Item {
             anchors.fill: parent
             visible: tile.empty
             radius: tile.radius
-            color: hover.hovered && !tile.locked ? Theme.cardHover : "#15181F"
+            color: hover.hovered && !tile.locked ? Theme.cardHover : Theme.tileEmpty
             border.width: 1
             border.color: tile.dropHint !== "" ? Theme.accent : Theme.border
             Column {

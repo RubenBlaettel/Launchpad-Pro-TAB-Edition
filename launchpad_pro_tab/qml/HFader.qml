@@ -58,7 +58,7 @@ Item {
         anchors.bottom: parent.bottom
         radius: 6
         color: Theme.faderTrack
-        border.color: "#23252B"
+        border.color: Theme.faderTrackBorder
 
         readonly property real capW: 30
         readonly property real travel: width - capW - 12

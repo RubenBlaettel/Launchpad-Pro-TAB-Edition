@@ -260,3 +260,94 @@ def test_mouse_and_touch_interaction(ctx, tmp_path, wav_file):
     backend.stopAll()
     assert wait_until(app, lambda: engine.snapshot == {}, 3)
     assert QML_ERRORS == []
+
+
+def _center(win, name):
+    from PySide6.QtCore import QPoint, QPointF
+
+    item = _find_item(win.contentItem(), name)
+    assert item is not None, name
+    p = item.mapToScene(QPointF(item.width() / 2, item.height() / 2))
+    return QPoint(int(p.x()), int(p.y()))
+
+
+def test_theme_switching(ctx):
+    from PySide6.QtCore import QObject, Qt
+    from PySide6.QtGui import QColor
+    from PySide6.QtTest import QTest
+
+    from launchpad_pro_tab.bridge import appearance
+
+    app, backend, win = ctx.app, ctx.backend, ctx.window
+    assert backend.themeMode == "dark" and backend.darkTheme
+    assert win.property("color") == QColor("#0A0B0F")
+
+    backend.setThemeMode("light")
+    wait_until(app, lambda: False, 0.2)
+    assert not backend.darkTheme and ctx.settings.theme == "light"
+    assert win.property("color") == QColor("#E8EBF0")
+    backend.toggleTheme()
+    assert backend.darkTheme and backend.themeMode == "dark"
+    backend.setThemeMode("unsinn")                      # wird ignoriert
+    assert backend.themeMode == "dark"
+    backend.setThemeMode("system")
+    assert backend.darkTheme == appearance.system_prefers_dark()
+
+    # Umschalten per Klick in den Einstellungen (Reiter „Darstellung“)
+    dlg = win.findChild(QObject, "settingsDialog")
+    dlg.setProperty("page", 0)
+    dlg.open()
+    assert wait_until(app, lambda: dlg.property("opened"), 3)
+    wait_until(app, lambda: False, 0.3)
+    QTest.mouseClick(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, _center(win, "themeCard_light"))
+    assert wait_until(app, lambda: backend.themeMode == "light", 3)
+    QTest.mouseClick(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, _center(win, "themeCard_dark"))
+    assert wait_until(app, lambda: backend.themeMode == "dark", 3)
+    for page in range(4):                               # alle Reiter ohne QML-Fehler
+        dlg.setProperty("page", page)
+        wait_until(app, lambda: False, 0.1)
+    dlg.close()
+    assert wait_until(app, lambda: not dlg.property("visible"), 3)
+    assert QML_ERRORS == []
+
+
+def test_update_notice_and_dialog(ctx):
+    from datetime import datetime, timezone
+
+    from PySide6.QtCore import QObject
+
+    from launchpad_pro_tab.update.install import InstallKind
+    from launchpad_pro_tab.update.releases import Asset, Release
+    from launchpad_pro_tab.update.version import parse_version
+
+    app, backend, win = ctx.app, ctx.backend, ctx.window
+    updater = backend.updater
+    pill = _find_item(win.contentItem(), "updatePill")
+    assert pill is not None and not pill.isVisible()
+
+    release = Release(parse_version("99.0.0"), "v99.0.0", "Launchpad Pro 99", "## Neu\n\n- Alles besser",
+                      "https://example.invalid/v99", datetime(2026, 10, 1, tzinfo=timezone.utc), False,
+                      [Asset("LaunchpadProTAB-Setup-99.0.0.exe", "https://example.invalid/s.exe", 1000, "0" * 64)])
+    updater._kind = InstallKind.WINDOWS_INSTALLER
+    updater._manual = False
+    updater._checked([release])
+    wait_until(app, lambda: False, 0.3)
+    assert updater.available and updater.canInstall and updater.latestVersion == "99.0.0"
+    assert pill.isVisible()
+
+    dlg = win.findChild(QObject, "updateDialog")
+    dlg.open()
+    assert wait_until(app, lambda: dlg.property("opened"), 3)
+    button = _find_item(win.contentItem(), "installUpdateButton")
+    assert button is not None and button.isEnabled()
+    backend.setShowMode(True)                           # während der Vorstellung gesperrt
+    wait_until(app, lambda: False, 0.1)
+    assert not button.isEnabled()
+    backend.setShowMode(False)
+    dlg.close()
+    assert wait_until(app, lambda: not dlg.property("visible"), 3)
+
+    updater.skipVersion()
+    wait_until(app, lambda: False, 0.2)
+    assert not updater.available and not pill.isVisible()
+    assert QML_ERRORS == []

@@ -1,8 +1,9 @@
 """QML-Element ``WaveformView``: Wellenform-Darstellung im Stil eines Oszilloskops.
 
-Grün auf Schwarz mit Raster (angelehnt an Bild 1). Gezeichnet wird nur bei Zoom-,
-Größen- oder Auswahländerungen; der Abspielkopf ist ein separates QML-Element und
-bewegt sich daher ohne Neuzeichnen der Wellenform (GPU-schonend).
+Grün auf Schwarz mit Raster (angelehnt an Bild 1); im hellen Modus (``dark: false``)
+dunkelgrün auf hellem Grund. Gezeichnet wird nur bei Zoom-, Größen-, Farb- oder
+Auswahländerungen; der Abspielkopf ist ein separates QML-Element und bewegt sich daher
+ohne Neuzeichnen der Wellenform (GPU-schonend).
 """
 
 from __future__ import annotations
@@ -20,15 +21,44 @@ QML_IMPORT_MAJOR_VERSION = 1
 
 _STEPS = (0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 15, 30, 60, 120, 300, 600)
 
-BG = QColor("#000000")
-GRID = QColor(24, 92, 52, 150)
-GRID_MAJOR = QColor(30, 120, 66, 200)
-LABEL = QColor(46, 170, 100)
-WAVE = QColor("#14D992")
-WAVE_CORE = QColor("#6BF5C3")
-WAVE_DIM = QColor(20, 217, 146, 70)
-WAVE_DIM_CORE = QColor(107, 245, 195, 60)
-CENTER = QColor(20, 217, 146, 90)
+class Palette:
+    """Farben der Wellenform – je eine Palette für den dunklen und den hellen Modus."""
+
+    def __init__(self, bg: QColor, grid: QColor, grid_major: QColor, label: QColor, wave: QColor,
+                 wave_core: QColor, wave_dim: QColor, wave_dim_core: QColor, center: QColor):
+        self.bg = bg
+        self.grid = grid
+        self.grid_major = grid_major
+        self.label = label
+        self.wave = wave
+        self.wave_core = wave_core
+        self.wave_dim = wave_dim
+        self.wave_dim_core = wave_dim_core
+        self.center = center
+
+
+DARK = Palette(
+    bg=QColor("#000000"),
+    grid=QColor(24, 92, 52, 150),
+    grid_major=QColor(30, 120, 66, 200),
+    label=QColor(46, 170, 100),
+    wave=QColor("#14D992"),
+    wave_core=QColor("#6BF5C3"),
+    wave_dim=QColor(20, 217, 146, 70),
+    wave_dim_core=QColor(107, 245, 195, 60),
+    center=QColor(20, 217, 146, 90),
+)
+LIGHT = Palette(
+    bg=QColor("#F3F7F5"),
+    grid=QColor(9, 138, 94, 38),
+    grid_major=QColor(9, 138, 94, 70),
+    label=QColor(40, 110, 82),
+    wave=QColor("#12A872"),
+    wave_core=QColor("#07714D"),
+    wave_dim=QColor(18, 168, 114, 70),
+    wave_dim_core=QColor(7, 113, 77, 60),
+    center=QColor(9, 138, 94, 90),
+)
 
 
 def _fmt(t: float, step: float) -> str:
@@ -44,12 +74,14 @@ class WaveformView(QQuickPaintedItem):
     selectionChanged = Signal()
     activeChanged = Signal()
     durationChanged = Signal()
+    darkChanged = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setAntialiasing(False)
         self.setOpaquePainting(True)
-        self.setFillColor(BG)
+        self._pal = DARK
+        self.setFillColor(self._pal.bg)
         self._peaks: np.ndarray | None = None
         self._pcm: np.ndarray | None = None
         self._sr = 48000
@@ -127,11 +159,23 @@ class WaveformView(QQuickPaintedItem):
             self.activeChanged.emit()
             self.update()
 
+    def _get_dark(self) -> bool:
+        return self._pal is DARK
+
+    def _set_dark(self, v: bool) -> None:
+        pal = DARK if v else LIGHT
+        if pal is not self._pal:
+            self._pal = pal
+            self.setFillColor(pal.bg)
+            self.darkChanged.emit()
+            self.update()
+
     viewStart = Property(float, _get_view_start, _set_view_start, notify=viewChanged)
     viewEnd = Property(float, _get_view_end, _set_view_end, notify=viewChanged)
     selStart = Property(float, _get_sel_start, _set_sel_start, notify=selectionChanged)
     selEnd = Property(float, _get_sel_end, _set_sel_end, notify=selectionChanged)
     active = Property(bool, _get_active, _set_active, notify=activeChanged)
+    dark = Property(bool, _get_dark, _set_dark, notify=darkChanged)
     duration = Property(float, lambda self: self._duration, notify=durationChanged)
 
     # ------------------------------------------------------------------
@@ -140,13 +184,14 @@ class WaveformView(QQuickPaintedItem):
     def paint(self, painter: QPainter) -> None:
         w = max(1, int(self.width()))
         h = max(1.0, float(self.height()))
-        painter.fillRect(QRectF(0, 0, w, h), BG)
+        pal = self._pal
+        painter.fillRect(QRectF(0, 0, w, h), pal.bg)
         v0, v1 = self._view_start, self._view_end
         span = max(1e-6, v1 - v0)
         mid = h / 2.0
 
         # Raster: horizontale Linien (Viertel) + Zeitraster mit Beschriftung
-        pen = QPen(GRID, 1)
+        pen = QPen(pal.grid, 1)
         painter.setPen(pen)
         for frac in (0.125, 0.25, 0.375, 0.625, 0.75, 0.875):
             y = round(h * frac) + 0.5
@@ -156,14 +201,14 @@ class WaveformView(QQuickPaintedItem):
         painter.setFont(self._font)
         while t <= v1 + 1e-9:
             x = round((t - v0) / span * w) + 0.5
-            painter.setPen(QPen(GRID_MAJOR, 1))
+            painter.setPen(QPen(pal.grid_major, 1))
             painter.drawLine(QLineF(x, 0, x, h))
             if self._active:
-                painter.setPen(LABEL)
+                painter.setPen(pal.label)
                 painter.drawText(QRectF(x + 3, 2, 60, 12), Qt.AlignmentFlag.AlignLeft, _fmt(t, step))
             t += step
 
-        painter.setPen(QPen(CENTER, 1))
+        painter.setPen(QPen(pal.center, 1))
         painter.drawLine(QLineF(0, mid, w, mid))
         if not self._active or self._peaks is None or self._duration <= 0:
             return
@@ -187,7 +232,8 @@ class WaveformView(QQuickPaintedItem):
         inside = (col_t >= self._sel_start) & (col_t <= self._sel_end)
         has_data = col_t <= self._duration
 
-        for mask, c_peak, c_core in ((~inside & has_data, WAVE_DIM, WAVE_DIM_CORE), (inside & has_data, WAVE, WAVE_CORE)):
+        for mask, c_peak, c_core in ((~inside & has_data, pal.wave_dim, pal.wave_dim_core),
+                                     (inside & has_data, pal.wave, pal.wave_core)):
             idx = np.nonzero(mask)[0]
             if idx.size == 0:
                 continue

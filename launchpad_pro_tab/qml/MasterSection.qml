@@ -53,7 +53,7 @@ Card {
                 Text {
                     anchors.right: parent.right
                     text: Math.round(master.volume * 100) + " %"
-                    color: master.muted ? Theme.textMute : "#FFFFFF"
+                    color: master.muted ? Theme.textMute : Theme.text
                     font.family: Theme.fontFamily
                     font.pixelSize: 18
                     font.weight: Font.Bold

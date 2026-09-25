@@ -30,12 +30,12 @@ T.AbstractButton {
             source: Theme.icon(control.iconName)
             sourceSize: Qt.size(22, 22)
             width: 22; height: 22
-            color: control.accent ? "#05140E" : (control.highlighted ? control.highlightColor : Theme.text)
+            color: control.accent ? Theme.onAccent : (control.highlighted ? control.highlightColor : Theme.text)
         }
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
             text: control.text
-            color: control.accent ? "#05140E" : (control.highlighted ? control.highlightColor : Theme.textDim)
+            color: control.accent ? Theme.onAccent : (control.highlighted ? control.highlightColor : Theme.textDim)
             font.family: Theme.fontFamily
             font.pixelSize: 9
             font.weight: Font.DemiBold

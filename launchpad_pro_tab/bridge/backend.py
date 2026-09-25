@@ -14,6 +14,7 @@ from typing import Any
 import numpy as np
 from PySide6.QtCore import Property, QObject, QTimer, QUrl, Signal, Slot
 
+from .. import __version__
 from ..audio import cache, tasks
 from ..audio.cache import CacheEntry
 from ..audio.engine import AudioEngine
@@ -34,13 +35,16 @@ from ..core.constants import (
 from ..core.models import EditParams, TileData, clamp_grid
 from ..core.paths import default_projects_dir
 from ..core.project import Project, ProjectError
-from ..core.settings import AppSettings
+from ..core.settings import THEME_MODES, AppSettings
 from ..core.util import format_time
+from ..update.version import is_newer
+from . import appearance
 from .covers import import_cover
 from .editor import EditorController
 from .models import RecentAudioModel, RecentProjectsModel, TileModel
 from .qtutil import PropertyObject, rprop, to_local_path
 from .tasks import TaskRunner
+from .updater import UpdateController
 from .volume import MasterVolumeController
 
 log = logging.getLogger(__name__)
@@ -63,6 +67,7 @@ class Backend(PropertyObject):
     audioChanged = Signal()
     showModeChanged = Signal()
     recentChanged = Signal()
+    themeChanged = Signal()
 
     def __init__(self, engine: AudioEngine, runner: TaskRunner, settings: AppSettings,
                  documents_dir: Path | None = None, volume: MasterVolumeController | None = None,
@@ -78,6 +83,10 @@ class Backend(PropertyObject):
         self._recent_projects = RecentProjectsModel(self)
         self._master = volume or MasterVolumeController(self)
         self._editor = EditorController(self, self)
+        self._updater = UpdateController(runner, settings, self)
+        self._updater.prepare_hook = self.prepare_for_update
+        self._updater.project_hook = lambda: str(self.project.root) if self.project is not None else None
+        self._updater.busy_hook = self._set_busy
         self._pcm: dict[Key, np.ndarray] = {}
         self._tokens: dict[Key, int] = {}
         self._playing_keys: set[Key] = set()
@@ -96,6 +105,11 @@ class Backend(PropertyObject):
         self._level_r = 0.0
         self._limiting = False
         self._show_mode = False
+        self._theme_mode = settings.theme
+        self._dark = appearance.apply_color_scheme(self._theme_mode)
+        hints = appearance.style_hints()
+        if hints is not None:
+            hints.colorSchemeChanged.connect(self._on_system_scheme)
 
         self._ui_timer = QTimer(self)
         self._ui_timer.setInterval(33)
@@ -114,10 +128,24 @@ class Backend(PropertyObject):
         self._refresh_recent_audio()
         self._refresh_recent_projects()
 
-    def start(self) -> None:
+    def start(self, check_updates: bool = False) -> None:
         self._ui_timer.start()
         self._autosave_timer.start()
         self._clock.start()
+        self._announce_version()
+        if check_updates:
+            self._updater.start()
+            self.runner.submit_thread(self._updater.cleanup)
+
+    def _announce_version(self) -> None:
+        """Nach einem Update einmalig die neue Version melden."""
+        previous = self.settings.last_version
+        if previous == __version__:
+            return
+        if previous and is_newer(__version__, previous):
+            self.notify(f"Launchpad Pro wurde auf Version {__version__} aktualisiert.", "success")
+        self.settings.last_version = __version__
+        self.settings.save()
 
     # ------------------------------------------------------------------
     # Properties für QML
@@ -127,6 +155,7 @@ class Backend(PropertyObject):
     recentProjects = Property(QObject, lambda self: self._recent_projects, constant=True)
     editor = Property(QObject, lambda self: self._editor, constant=True)
     master = Property(QObject, lambda self: self._master, constant=True)
+    updater = Property(QObject, lambda self: self._updater, constant=True)
 
     hasProject = rprop(bool, "_has_project", projectChanged)
     projectName = rprop(str, "_project_name", projectChanged)
@@ -140,6 +169,8 @@ class Backend(PropertyObject):
     levelR = rprop(float, "_level_r", levelsChanged)
     limiting = rprop(bool, "_limiting", levelsChanged)
     showMode = rprop(bool, "_show_mode", showModeChanged)
+    themeMode = rprop(str, "_theme_mode", themeChanged)
+    darkTheme = rprop(bool, "_dark", themeChanged)
 
     gridOptions = Property(list, lambda self: list(range(GRID_MIN, GRID_MAX + 1)), constant=True)
     tileColors = Property(list, lambda self: list(TILE_COLORS), constant=True)
@@ -921,6 +952,32 @@ class Backend(PropertyObject):
     def setShowMode(self, enabled: bool) -> None:  # noqa: N802
         self._set("_show_mode", bool(enabled), "showModeChanged")
 
+    # ------------------------------------------------------------------
+    # Darstellung (Dunkel / Hell / wie System)
+    # ------------------------------------------------------------------
+    @Slot(str)
+    def setThemeMode(self, mode: str) -> None:  # noqa: N802
+        if mode not in THEME_MODES:
+            return
+        if self.settings.theme != mode:
+            self.settings.theme = mode
+            self.settings.save()
+        self._theme_mode = mode
+        self._dark = appearance.apply_color_scheme(mode)
+        self.themeChanged.emit()
+
+    @Slot()
+    def toggleTheme(self) -> None:  # noqa: N802
+        """Schnellumschalter in der Kopfleiste: wechselt zwischen Dunkel und Hell."""
+        self.setThemeMode("light" if self._dark else "dark")
+
+    def _on_system_scheme(self, *_args) -> None:
+        if self._theme_mode == "system":
+            dark = appearance.system_prefers_dark()
+            if dark != self._dark:
+                self._dark = dark
+                self.themeChanged.emit()
+
     @Slot(int)
     def setOutputDevice(self, index: int) -> None:  # noqa: N802
         if index <= 0:
@@ -958,6 +1015,15 @@ class Backend(PropertyObject):
     # ------------------------------------------------------------------
     # Beenden
     # ------------------------------------------------------------------
+    def prepare_for_update(self) -> bool:
+        """Vor dem Installieren eines Updates: Wiedergabe stoppen, alles speichern,
+        Worker-Prozesse beenden (damit der Installer alle Programmdateien ersetzen kann)."""
+        self.engine.stop_all()
+        ok = self.saveBeforeClose()
+        if ok:
+            self.runner.stop_processes()
+        return ok
+
     @Slot(result=bool)
     def saveBeforeClose(self) -> bool:  # noqa: N802
         """Wird beim Schließen des Fensters aufgerufen: Projekt sicher speichern."""
@@ -984,6 +1050,7 @@ class Backend(PropertyObject):
         except Exception:
             log.exception("Speichern beim Beenden fehlgeschlagen")
         self.settings.save()
+        self._updater.shutdown()
         self.engine.shutdown()
         self._master.shutdown()
         self.runner.shutdown()

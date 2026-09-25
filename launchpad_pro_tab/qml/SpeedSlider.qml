@@ -43,7 +43,7 @@ Item {
             width: parent.width - slider.knob
             height: 6
             radius: 3
-            color: "#0B0C10"
+            color: Theme.railBg
             border.color: Theme.border
         }
         // Füllung von der Mitte (1,0×) zum Knopf
@@ -75,8 +75,8 @@ Item {
             width: slider.knob
             height: slider.knob
             radius: width / 2
-            color: drag.active ? Qt.lighter(Theme.accent, 1.1) : "#F2F4F7"
-            border.color: Math.abs(slider.pos) < 0.001 ? Theme.accent : "#8B93A3"
+            color: drag.active ? Qt.lighter(Theme.accent, 1.1) : Theme.knob
+            border.color: Math.abs(slider.pos) < 0.001 ? Theme.accent : Theme.knobBorder
             border.width: 3
             Behavior on x { enabled: !drag.active; NumberAnimation { duration: 90 } }
         }

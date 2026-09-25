@@ -6,5 +6,6 @@ sounddevice>=0.4.6             # Audio-Ausgabe über PortAudio (Windows: WASAPI,
 soundfile>=0.12.1              # WAV/FLAC/OGG/AIFF/MP3 lesen, FLAC schreiben (libsndfile)
 av>=12.0                       # FFmpeg: MP3, AAC/M4A, WMA, Opus, ALAC, AC3 … dekodieren
 soxr>=0.3.7                    # hochwertiges Resampling
+certifi>=2024.2.2              # Stammzertifikate für die Update-Prüfung (HTTPS)
 pycaw>=20240316 ; sys_platform == "win32"   # Windows-Systemlautstärke (Core Audio)
 comtypes>=1.2 ; sys_platform == "win32"

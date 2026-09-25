@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "launchpad-pro-tab"
-version = "1.0.0"
+dynamic = ["version"]
 description = "Launchpad Pro TAB Edition – touch-optimierte Launchpad-Software (Soundboard) für den Theaterbetrieb"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -16,6 +16,7 @@ dependencies = [
     "soundfile>=0.12.1",
     "av>=12.0",
     "soxr>=0.3.7",
+    "certifi>=2024.2.2",
     "pycaw>=20240316; sys_platform == 'win32'",
     "comtypes>=1.2; sys_platform == 'win32'",
 ]
@@ -25,6 +26,9 @@ dev = ["pytest>=8.0", "pyinstaller>=6.6"]
 
 [project.gui-scripts]
 launchpad-pro-tab = "launchpad_pro_tab.app:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "launchpad_pro_tab.__version__" }
 
 [tool.setuptools.packages.find]
 include = ["launchpad_pro_tab*"]

@@ -5,6 +5,7 @@ import QtQuick.Layouts
 Item {
     id: host
     property int maxToasts: 3
+    signal actionTriggered(string action)
 
     function show(message, kind, action) {
         if (toastModel.count >= maxToasts) toastModel.remove(0)
@@ -33,7 +34,7 @@ Item {
                 width: Math.min(host.width - 40, row.implicitWidth + 36)
                 height: Math.max(52, msg.implicitHeight + 24)
                 radius: 12
-                color: "#F21A1D25"
+                color: Theme.popup
                 border.color: Theme.alpha(accentColor, 0.65)
                 opacity: 0
                 Component.onCompleted: opacity = 1
@@ -69,6 +70,16 @@ Item {
                         onClicked: { backend.undoClear(); toastModel.remove(toast.index) }
                     }
                     AppButton {
+                        visible: toast.action === "update"
+                        implicitHeight: 38
+                        text: "Anzeigen"
+                        iconName: "sparkle"
+                        iconSize: 16
+                        variant: "accent"
+                        font.pixelSize: Theme.fontSmall
+                        onClicked: { host.actionTriggered("update"); toastModel.remove(toast.index) }
+                    }
+                    AppButton {
                         width: 36; implicitHeight: 36
                         iconName: "close"
                         iconSize: 12
@@ -79,7 +90,7 @@ Item {
                 }
                 Timer {
                     running: true
-                    interval: toast.action === "undo" ? 8000 : (toast.kind === "error" ? 7000 : 4000)
+                    interval: toast.action !== "" ? 8000 : (toast.kind === "error" ? 7000 : 4000)
                     onTriggered: if (toast.index >= 0 && toast.index < toastModel.count) toastModel.remove(toast.index)
                 }
             }

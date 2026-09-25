@@ -14,5 +14,7 @@ Wichtig: Dieses Modul darf kein Qt importieren, weil die Audio-Worker-Prozesse
 
 __app_name__ = "Launchpad Pro TAB Edition"
 __app_id__ = "LaunchpadProTAB"
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 __organization__ = "TAB Theater"
+# GitHub-Repository, aus dessen Releases sich das Programm aktualisiert
+__repository__ = "RubenBlaettel/Launchpad-Pro-TAB-Edition"

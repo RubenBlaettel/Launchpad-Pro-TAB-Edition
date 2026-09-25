@@ -12,8 +12,8 @@ Item {
     Rectangle {
         anchors.fill: parent
         radius: logo.size * 0.22
-        color: "#191B22"
-        border.color: "#2C3140"
+        color: Theme.logoBg
+        border.color: Theme.logoBorder
     }
     Grid {
         anchors.centerIn: parent

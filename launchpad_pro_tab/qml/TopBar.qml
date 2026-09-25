@@ -6,6 +6,7 @@ Rectangle {
     id: bar
     signal gridSizeRequested(int n)
     signal settingsRequested()
+    signal updateRequested()
     implicitHeight: 68
     color: Theme.bgRaised
 
@@ -38,6 +39,24 @@ Rectangle {
         }
 
         Item { Layout.fillWidth: true }
+
+        // Neue Version verfügbar (öffnet den Update-Dialog)
+        AppButton {
+            objectName: "updatePill"
+            visible: updater.available
+            implicitHeight: 40
+            text: updater.state === "downloading" ? "Update " + Math.round(updater.progress * 100) + " %"
+                : updater.state === "installing" ? "Update wird installiert …"
+                : "Update " + updater.latestVersion
+            iconName: updater.state === "downloading" ? "download" : "sparkle"
+            iconSize: 16
+            variant: "solid"
+            active: true
+            activeColor: Theme.accent
+            font.pixelSize: Theme.fontSmall
+            toolTipText: "Eine neue Version von Launchpad Pro ist verfügbar"
+            onClicked: bar.updateRequested()
+        }
 
         // Audio-Status
         Rectangle {
@@ -126,11 +145,21 @@ Rectangle {
             toolTipText: "Alle Kacheln sofort (kurz ausgeblendet) stoppen  [Esc]"
         }
 
+        // Schnellumschalter Hell/Dunkel
+        AppButton {
+            objectName: "themeToggle"
+            iconName: Theme.dark ? "sun" : "moon"
+            variant: "ghost"
+            Layout.preferredWidth: Theme.touch
+            toolTipText: Theme.dark ? "Helles Design" : "Dunkles Design"
+            onClicked: backend.toggleTheme()
+        }
+
         AppButton {
             iconName: "settings"
             variant: "ghost"
             Layout.preferredWidth: Theme.touch
-            toolTipText: "Audio-Einstellungen"
+            toolTipText: "Einstellungen (Darstellung, Audio, Updates)"
             onClicked: bar.settingsRequested()
         }
     }

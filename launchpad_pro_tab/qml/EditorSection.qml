@@ -71,7 +71,7 @@ Card {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 124
                     radius: 8
-                    color: "#000000"
+                    color: Theme.waveBg
                     border.color: Theme.border
                     clip: true
 
@@ -80,6 +80,7 @@ Card {
                         anchors.fill: parent
                         anchors.margins: 1
                         active: editor.active
+                        dark: Theme.dark
                         viewStart: editor.viewStart
                         viewEnd: editor.viewEnd
                         selStart: editor.selStart
@@ -147,7 +148,7 @@ Card {
                                 anchors.horizontalCenter: parent.horizontalCenter
                                 width: 2
                                 height: parent.height
-                                color: hDrag.active ? "#FFFFFF" : Theme.warning
+                                color: hDrag.active ? Theme.playhead : Theme.warning
                             }
                             Rectangle {
                                 // Fahne mit Zeit
@@ -156,12 +157,12 @@ Card {
                                 width: flagText.implicitWidth + 12
                                 height: 20
                                 radius: 4
-                                color: hDrag.active ? "#FFFFFF" : Theme.warning
+                                color: hDrag.active ? Theme.playhead : Theme.warning
                                 Text {
                                     id: flagText
                                     anchors.centerIn: parent
                                     text: (handle.isStart ? "[ " : "") + editor.fmt(handle.t) + (handle.isStart ? "" : " ]")
-                                    color: "#15120A"
+                                    color: hDrag.active ? Theme.panel : Theme.onWarning
                                     font.family: Theme.fontFamily
                                     font.pixelSize: 10
                                     font.weight: Font.Bold
@@ -193,12 +194,12 @@ Card {
                         z: 6
                         width: 2
                         height: waveFrame.height
-                        color: "#FFFFFF"
+                        color: Theme.playhead
                         Rectangle {
                             anchors.horizontalCenter: parent.horizontalCenter
                             anchors.verticalCenter: parent.top
                             width: 10; height: 10; rotation: 45
-                            color: "#FFFFFF"
+                            color: Theme.playhead
                         }
                     }
 
@@ -249,7 +250,7 @@ Card {
                     Rectangle {
                         anchors.fill: parent
                         visible: editor.loading || editor.saving
-                        color: "#B0000000"
+                        color: Theme.scrimStrong
                         z: 8
                         Column {
                             anchors.centerIn: parent
@@ -272,7 +273,7 @@ Card {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 12
                     radius: 4
-                    color: "#0D0F13"
+                    color: Theme.overviewBg
                     border.color: Theme.border
                     opacity: editor.active ? 1 : 0.4
                     readonly property real dur: Math.max(0.001, editor.duration)
@@ -290,7 +291,7 @@ Card {
                         height: parent.height
                         radius: 4
                         color: "transparent"
-                        border.color: "#FFFFFF"
+                        border.color: Theme.playhead
                         border.width: 1.5
                         visible: editor.active
                     }
@@ -298,7 +299,7 @@ Card {
                         x: overview.width * editor.position / overview.dur - 1
                         width: 2
                         height: parent.height
-                        color: "#FFFFFF"
+                        color: Theme.playhead
                         visible: editor.active
                     }
                     DragHandler {

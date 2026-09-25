@@ -19,6 +19,7 @@ ApplicationWindow {
     property bool forceQuit: false
     readonly property bool dialogOpen: tileMenu.opened || newDialog.opened || openDialog.opened || settingsDialog.opened
                                        || infoDialog.opened || shrinkDialog.opened || closeFailed.opened
+                                       || updateDialog.opened
 
     // Vor dem endgültigen Schließen das Projekt sicher speichern
     onClosing: (close) => {
@@ -31,7 +32,8 @@ ApplicationWindow {
 
     header: TopBar {
         onGridSizeRequested: (n) => win.requestGridSize(n)
-        onSettingsRequested: settingsDialog.open()
+        onSettingsRequested: settingsDialog.openPage(0)
+        onUpdateRequested: updateDialog.open()
     }
 
     function requestGridSize(n) {
@@ -148,6 +150,7 @@ ApplicationWindow {
                 id: toasts
                 anchors.fill: parent
                 z: 50
+                onActionTriggered: (action) => { if (action === "update") updateDialog.open() }
             }
         }
     }
@@ -159,7 +162,7 @@ ApplicationWindow {
         parent: Overlay.overlay
         anchors.fill: parent
         visible: backend.busyText !== ""
-        color: "#B8000000"
+        color: Theme.scrimStrong
         z: 900
         Column {
             anchors.centerIn: parent
@@ -180,7 +183,12 @@ ApplicationWindow {
     TileMenu { id: tileMenu; objectName: "tileMenu" }
     NewProjectDialog { id: newDialog; objectName: "newDialog" }
     OpenProjectDialog { id: openDialog; objectName: "openDialog" }
-    SettingsDialog { id: settingsDialog; objectName: "settingsDialog" }
+    SettingsDialog {
+        id: settingsDialog
+        objectName: "settingsDialog"
+        onShowUpdateRequested: updateDialog.open()
+    }
+    UpdateDialog { id: updateDialog; objectName: "updateDialog" }
     InfoDialog { id: infoDialog }
     ConfirmDialog {
         id: shrinkDialog
@@ -203,6 +211,16 @@ ApplicationWindow {
         target: backend
         function onToast(message, kind, action) { toasts.show(message, kind, action) }
         function onErrorDialog(title, message) { infoDialog.show(title, message) }
+    }
+    Connections {
+        target: updater
+        // Neue Version: kurzer Hinweis (nicht während einer Vorstellung) + dauerhaft der Knopf oben
+        function onUpdateFound(version) {
+            if (!backend.showMode)
+                toasts.show("Neue Version " + version + " von Launchpad Pro ist verfügbar.", "info", "update")
+        }
+        // Installer/Neustart übernimmt – Projekt ist bereits gespeichert
+        function onQuitRequested() { win.forceQuit = true; Qt.quit() }
     }
 
     // ------------------------------------------------ Tastenkürzel

@@ -1,10 +1,12 @@
 # -*- mode: python ; coding: utf-8 -*-
-# PyInstaller-Konfiguration für die Windows-Programmversion (Ordner mit .exe).
+# PyInstaller-Konfiguration für die Programmversion (Ordner mit ausführbarer Datei).
 #
 #   pip install -r requirements-dev.txt
 #   pyinstaller packaging/launchpad_pro_tab.spec --noconfirm
 #
-# Ergebnis: dist/LaunchpadProTAB/LaunchpadProTAB.exe
+# Ergebnis: dist/LaunchpadProTAB/LaunchpadProTAB(.exe)
+# Danach:   python tools/build_installer.py       (Windows-Installer, Inno Setup 7)
+#           python tools/build_linux_package.py   (Linux-Paket .tar.gz mit install.sh)
 import os
 import sys
 
@@ -43,8 +45,12 @@ a = Analysis(  # noqa: F821
     datas=datas,
     hiddenimports=hiddenimports,
     excludes=["tkinter", "matplotlib", "PySide6.QtWebEngineCore", "PySide6.Qt3DCore"],
+    runtime_hooks=[os.path.join(SPECPATH, "pyi_rth_portaudio.py")],  # noqa: F821
     noarchive=False,
 )
+# Linux: die ALSA-Bibliothek des Systems verwenden (passend zu dessen PipeWire-/PulseAudio-
+# Plugins). Eine mitgelieferte libasound findet die Plugins anderer Distributionen nicht.
+a.binaries = [b for b in a.binaries if not os.path.basename(b[0]).startswith("libasound.so")]
 pyz = PYZ(a.pure)  # noqa: F821
 
 exe = EXE(  # noqa: F821
@@ -53,7 +59,7 @@ exe = EXE(  # noqa: F821
     [],
     exclude_binaries=True,
     name="LaunchpadProTAB",
-    icon=os.path.join(ROOT, "launchpad_pro_tab", "assets", "app_icon.ico"),
+    icon=os.path.join(ROOT, "launchpad_pro_tab", "assets", "app_icon.ico") if os.name == "nt" else None,
     console=False,          # keine Konsole
     disable_windowed_traceback=False,
     upx=False,
