@@ -98,7 +98,8 @@ launchpad_pro_tab/
     models.py         TileModel, RecentAudioModel, RecentProjectsModel (QAbstractListModel)
     waveform.py       WaveformView (QQuickPaintedItem, `import LaunchpadPro`)
     covers.py         Cover importieren (ICO: größtes Bild, max. 1024 px)
-    tasks.py          TaskRunner: ProcessPool(spawn) + ThreadPool, Ergebnisse per Signal in UI-Thread
+    tasks.py          TaskRunner: ProcessPool(spawn) + ThreadPool, Ergebnisse per Signal in UI-Thread;
+                      BrokenProcessPool -> Aufgabe im Thread wiederholen, nach 2 Ausfällen nur noch Threads
     qtutil.py         rprop()/PropertyObject._set(), to_local_path()
   qml/                Main.qml + Komponenten (flach), Theme.qml (Singleton via qmldir), icons/*.svg
 tools/                make_screenshots.py, demo_assets.py (synthetische Klänge/Cover), make_icons.py, make_icon.py
@@ -151,6 +152,10 @@ verwerfen veraltete Ergebnisse.
 - MultiEffect-„Leuchten“: `shadowEnabled` auf eine unsichtbare Quell-Rechteckfläche wirkt deutlich
   besser als `blurEnabled`.
 - Offscreen-Plattform im Test: Bildschirm nur 800×800 → Layout eng, aber funktionsfähig.
+- Eigene Skripte, die `create_app()` nutzen, brauchen `if __name__ == "__main__":` – sonst starten die
+  Worker-Prozesse (spawn) das Skript erneut und der Pool bricht ab.
+- Worker-Aufgaben dürfen nur Qt-freie Module referenzieren (sonst lädt jeder Worker Qt) –
+  daher liegt z. B. das Aufwärmen in `audio.tasks.ping`.
 
 ## 6. Teststrategie
 
@@ -163,7 +168,17 @@ verwerfen veraltete Ergebnisse.
   **echte Maus-/Touch-Ereignisse** (QTest) inkl. Langdrücken und Show-Modus.
 - Neue Features immer mit Test + Screenshot-Kontrolle.
 
-## 7. Ideen / mögliche nächste Schritte
+## 7. Stand der Prüfungen (v1.0)
+
+- Lokal (Linux-Container): 51 Tests grün, `--smoke-test` grün (Quellcode und PyInstaller-Build).
+- GitHub Actions: Tests unter **Linux und Windows** grün (Windows: 50/50 ohne Skips beim ersten Lauf),
+  Windows-EXE gebaut, `LaunchpadProTAB.exe --smoke-test` erfolgreich, Artefakt ≈ 108 MB (gezippt).
+- Mixer-Last (Build-Server): 16 gleichzeitige Kacheln = 0,19 ms je 5,3-ms-Block (3,6 %).
+- Nicht automatisch prüfbar (auf echter Hardware testen!): tatsächliche Ausgabelatenz mit WASAPI,
+  Windows-Systemlautstärke per pycaw auf einem Rechner mit Audiogerät, Touch-Bedienung auf einem
+  echten Touchscreen, native Datei-Dialoge.
+
+## 8. Ideen / mögliche nächste Schritte
 
 - MIDI-Eingang (physisches Launchpad als Fernbedienung) – Schnittstelle: `backend.triggerTile(i)`.
 - Tastatur-Belegung für Kacheln, Cue-Liste/Szenenfolge, Fade-in/Fade-out-Regler je Kachel,

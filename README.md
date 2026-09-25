@@ -64,6 +64,11 @@ Bei jedem Push baut GitHub automatisch ein Windows-Programm:
 3. `LaunchpadProTAB.exe` starten (keine Installation und kein Python nötig).
    Für den Desktop einfach eine Verknüpfung zur EXE anlegen.
 
+> **Hinweise:** GitHub bewahrt die Build-Artefakte 30 Tage auf. Einen neuen Build startet man jederzeit
+> unter *Actions → CI → Run workflow*. Da die EXE nicht digital signiert ist, kann Windows SmartScreen
+> beim ersten Start warnen: *Weitere Informationen → Trotzdem ausführen*. Den entpackten Ordner am
+> besten dauerhaft ablegen (z. B. `C:\LaunchpadProTAB`) – nicht im Download-Ordner.
+
 ### Variante B – Start mit Python (Windows, Linux, macOS)
 
 Voraussetzung: **Python 3.10 oder neuer** (empfohlen 3.12) von [python.org](https://www.python.org/downloads/)
@@ -117,6 +122,10 @@ ideal 1920×1080.
 
 Beim allerersten Start erscheint rechts der Willkommensbildschirm mit **Neues Projekt** und
 **Projekt öffnen**. Ab dann wird beim Start immer das zuletzt benutzte Projekt geladen.
+
+Auf kleineren Bildschirmen (z. B. 1366×768) passt nicht alles untereinander – dann lässt sich die
+linke Spalte mit dem Finger (oder Mausrad) scrollen. Das Kachel-Raster bleibt immer vollständig
+sichtbar.
 
 ### Projekte
 
