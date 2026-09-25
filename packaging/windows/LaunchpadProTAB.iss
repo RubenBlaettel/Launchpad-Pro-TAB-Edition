@@ -17,7 +17,9 @@
 ;
 ;  Automatisches Update aus dem Programm heraus (still, mit Neustart):
 ;      LaunchpadProTAB-Setup-x.y.z.exe /SILENT /SUPPRESSMSGBOXES /NORESTART
-;          /LPTABWAITPID=<Prozess-ID> /LPTABRESTART=1
+;          /LPTABWAITPID=<Prozess-ID> /LPTABREADY=<Datei> /LPTABRESTART=1
+;  (LPTABREADY: wird angelegt, sobald Setup mit Administratorrechten läuft – erst dann
+;   beendet sich das Programm; lehnt jemand die Sicherheitsabfrage ab, läuft es weiter.)
 ;  Stille Deinstallation inkl. Benutzerdaten (für Tests/Administratoren):
 ;      unins000.exe /VERYSILENT /SUPPRESSMSGBOXES /LPTABPURGE=1
 ; ============================================================================
@@ -197,8 +199,14 @@ function InitializeSetup(): Boolean;
 var
   Pid: Integer;
   Handle: THandle;
+  ReadyFile: String;
 begin
   Result := True;
+  { Dem Programm melden: Setup läuft (mit Administratorrechten) – es darf sich jetzt beenden }
+  ReadyFile := ExpandConstant('{param:LPTABREADY|}');
+  if ReadyFile <> '' then
+    if not SaveStringToFile(ReadyFile, 'bereit', False) then
+      Log('Bereit-Datei konnte nicht angelegt werden: ' + ReadyFile);
   Pid := StrToIntDef(ExpandConstant('{param:LPTABWAITPID|0}'), 0);
   if Pid > 0 then
   begin

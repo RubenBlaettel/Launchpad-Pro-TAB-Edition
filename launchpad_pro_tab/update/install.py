@@ -1,8 +1,10 @@
 """Installationsart erkennen und ein heruntergeladenes Update anwenden.
 
 Windows (per Installer installiert)
-    Der Installer (Inno Setup) wird still mit ``/LPTABWAITPID=<pid>`` gestartet, das
-    Programm beendet sich. Der Installer wartet, bis der Prozess beendet ist, ersetzt die
+    Der Installer (Inno Setup) wird still mit ``/LPTABWAITPID=<pid>`` gestartet. Sobald er
+    mit Administratorrechten läuft, legt er die Datei aus ``/LPTABREADY=<datei>`` an – erst
+    dann beendet sich das Programm (lehnt jemand die Windows-Sicherheitsabfrage ab, läuft es
+    einfach weiter). Der Installer wartet, bis der Prozess beendet ist, ersetzt die
     Programmdateien und startet Launchpad Pro als normaler Benutzer neu.
 
 Windows (portable, ohne Installer)
@@ -105,8 +107,11 @@ def install_hint(kind: InstallKind) -> str:
 # ---------------------------------------------------------------------------
 # Windows
 # ---------------------------------------------------------------------------
-def windows_installer_args(*, wait_pid: int, silent: bool, restart: bool, log_file: Path | None = None) -> list[str]:
+def windows_installer_args(*, wait_pid: int, silent: bool, restart: bool, ready_file: Path | None = None,
+                           log_file: Path | None = None) -> list[str]:
     args = [f"/LPTABWAITPID={wait_pid}"]
+    if ready_file is not None:
+        args.append(f"/LPTABREADY={ready_file}")
     if silent:
         args += ["/SILENT", "/SUPPRESSMSGBOXES", "/NORESTART"]
     if restart:
@@ -116,13 +121,18 @@ def windows_installer_args(*, wait_pid: int, silent: bool, restart: bool, log_fi
     return args
 
 
-def start_windows_installer(setup: Path, args: list[str]) -> None:
-    """Startet den Installer unabhängig vom laufenden Programm."""
+def start_windows_installer(setup: Path, args: list[str]) -> subprocess.Popen | None:
+    """Startet den Installer unabhängig vom laufenden Programm.
+
+    Liefert den Prozess (daran erkennt das Programm einen Abbruch der Sicherheitsabfrage);
+    ``None``, wenn Windows den Start nur über ShellExecute erlaubt hat.
+    """
     if sys.platform != "win32":
         raise InstallError("Der Windows-Installer kann nur unter Windows gestartet werden.")
     flags = getattr(subprocess, "DETACHED_PROCESS", 0x8) | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0x200)
     try:
-        subprocess.Popen([str(setup), *args], close_fds=True, creationflags=flags, cwd=str(Path(setup).parent))
+        return subprocess.Popen([str(setup), *args], close_fds=True, creationflags=flags,
+                                cwd=str(Path(setup).parent))
     except OSError as exc:
         if getattr(exc, "winerror", None) != 740:        # ERROR_ELEVATION_REQUIRED
             raise InstallError(f"Installer konnte nicht gestartet werden: {exc}") from exc
@@ -132,6 +142,7 @@ def start_windows_installer(setup: Path, args: list[str]) -> None:
         rc = ctypes.windll.shell32.ShellExecuteW(None, "runas", str(setup), params, str(Path(setup).parent), 1)
         if rc <= 32:
             raise InstallError(f"Installer konnte nicht gestartet werden (Code {rc}).") from exc
+        return None
 
 
 # ---------------------------------------------------------------------------

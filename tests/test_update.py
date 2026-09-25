@@ -226,8 +226,10 @@ def test_detect_install_kind(tmp_path):
 
 
 def test_windows_installer_arguments(tmp_path):
-    args = install.windows_installer_args(wait_pid=4242, silent=True, restart=True, log_file=tmp_path / "i.log")
+    args = install.windows_installer_args(wait_pid=4242, silent=True, restart=True,
+                                          ready_file=tmp_path / "bereit.flag", log_file=tmp_path / "i.log")
     assert "/LPTABWAITPID=4242" in args and "/SILENT" in args and "/SUPPRESSMSGBOXES" in args
+    assert f"/LPTABREADY={tmp_path / 'bereit.flag'}" in args
     assert "/LPTABRESTART=1" in args and any(a.startswith("/LOG=") for a in args)
     portable = install.windows_installer_args(wait_pid=1, silent=False, restart=False)
     assert "/SILENT" not in portable and "/LPTABRESTART=1" not in portable
@@ -240,7 +242,7 @@ def test_installer_script_matches_program():
     iss = (ROOT / "packaging" / "windows" / "LaunchpadProTAB.iss").read_text(encoding="utf-8")
     assert f'#define AppMutexName "{integration.MUTEX_NAME}"' in iss
     assert f'#define AppUserModelId "{integration.APP_USER_MODEL_ID}"' in iss
-    for param in ("LPTABWAITPID", "LPTABRESTART", "LPTABPURGE"):
+    for param in ("LPTABWAITPID", "LPTABRESTART", "LPTABPURGE", "LPTABREADY"):
         assert f"{{param:{param}|" in iss
     assert "--purge-user-data --yes" in iss
     assert "OutputBaseFilename=LaunchpadProTAB-Setup-{#AppVersion}" in iss
@@ -386,6 +388,60 @@ def test_update_controller_flow(qapp, github, tmp_path, monkeypatch):
         assert cmd[1] == "--finish-update" and cmd[2] == str(install_dir)
         assert cmd[cmd.index("--") + 1:] == ["--project", "/x/Show"]
         assert Path(cmd[0]).is_file()                     # neue Version liegt entpackt bereit
+    finally:
+        upd.shutdown()
+        runner.shutdown()
+
+
+class _FakeInstallerProcess:
+    def __init__(self):
+        self.returncode = None
+
+    def poll(self):
+        return self.returncode
+
+
+@pytest.mark.parametrize("uac_approved", [True, False])
+def test_update_controller_windows_waits_for_elevated_installer(qapp, github, tmp_path, monkeypatch, uac_approved):
+    """Windows: erst beenden, wenn der Installer mit Adminrechten läuft; bei Abbruch weiterlaufen."""
+    from launchpad_pro_tab.bridge.tasks import TaskRunner
+    from launchpad_pro_tab.bridge.updater import UpdateController
+    from launchpad_pro_tab.core.settings import AppSettings
+
+    github.add_release("v9.0.0", {"LaunchpadProTAB-Setup-9.0.0.exe": b"MZ" + os.urandom(20_000)})
+    monkeypatch.setenv("LPTAB_UPDATE_URL", github.url + "/api/releases")
+    started, fake = [], _FakeInstallerProcess()
+
+    def fake_start(setup, args):
+        started.append((Path(setup), args))
+        return fake
+
+    monkeypatch.setattr(install, "start_windows_installer", fake_start)
+    runner = TaskRunner(use_processes=False)
+    upd = UpdateController(runner, AppSettings.load(tmp_path / "e.json"), kind=InstallKind.WINDOWS_INSTALLER)
+    quit_, resumed = [], []
+    upd.quitRequested.connect(lambda: quit_.append(True))
+    upd.prepare_hook = lambda: True
+    upd.resume_hook = lambda: resumed.append(True)
+    try:
+        upd.check(False)
+        assert wait_until(qapp, lambda: upd.state == "available", 10), upd.message
+        upd.startUpdate()
+        assert wait_until(qapp, lambda: started, 20), upd.message
+        setup, args = started[0]
+        assert setup.read_bytes().startswith(b"MZ")                        # geprüfter Download
+        ready = Path(next(a for a in args if a.startswith("/LPTABREADY=")).split("=", 1)[1])
+        wait_until(qapp, lambda: False, 0.6)
+        assert upd.state == "installing" and not quit_                     # wartet auf die Sicherheitsabfrage
+        if uac_approved:
+            ready.write_text("bereit")                                     # Setup läuft mit Adminrechten
+            assert wait_until(qapp, lambda: quit_, 5)
+            assert not ready.exists() and not resumed
+        else:
+            fake.returncode = 2                                            # Abfrage abgelehnt
+            assert wait_until(qapp, lambda: upd.state == "error", 5)
+            assert resumed and not quit_
+            assert "Sicherheitsabfrage" in upd.message
     finally:
         upd.shutdown()
         runner.shutdown()

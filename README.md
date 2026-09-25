@@ -185,9 +185,11 @@ Ein Tipp auf den Knopf zeigt, was neu ist:
 ![Update-Dialog](docs/images/16_update_dialog.png)
 
 - **Jetzt aktualisieren:** Das Update wird heruntergeladen (mit Fortschrittsanzeige) und per
-  **SHA-256-Prüfsumme** geprüft. Danach speichert Launchpad Pro das Projekt, beendet sich, der
-  Installer aktualisiert das Programm im Hintergrund und startet es anschließend mit demselben
-  Projekt neu. Einstellungen, Verknüpfungen und Projekte bleiben erhalten.
+  **SHA-256-Prüfsumme** geprüft. Danach speichert Launchpad Pro das Projekt und Windows fragt nach
+  Administratorrechten. Nach der Bestätigung beendet sich das Programm, der Installer aktualisiert es
+  im Hintergrund und startet es anschließend mit demselben Projekt neu. Einstellungen,
+  Verknüpfungen und Projekte bleiben erhalten. Wird die Sicherheitsabfrage abgelehnt, läuft
+  Launchpad Pro einfach weiter.
   Unter Linux wird der Programmordner ausgetauscht und das Programm neu gestartet.
 - **Später:** Der Knopf oben bleibt als Erinnerung.
 - **Überspringen:** Diese Version wird nicht mehr angeboten (erst die nächste wieder).
@@ -514,9 +516,11 @@ Bruchteil der verfügbaren Zeit – Reserven gegen Aussetzer sind also reichlich
    Linux-Paket, Quellcode) und damit das passende Release-Paket.
 3. `update.download` lädt nur über HTTPS, schreibt zuerst `*.part` und prüft Größe und SHA-256
    (GitHub-Digest bzw. `SHA256SUMS.txt`) – erst dann wird die Datei verwendet.
-4. **Windows:** Installer still starten (`/SILENT /LPTABWAITPID=<pid> /LPTABRESTART=1`), Programm
-   beendet sich; der Installer wartet auf das Prozessende, ersetzt die Dateien und startet das
-   Programm als normaler Benutzer neu. **Linux:** Archiv neben den Programmordner entpacken, die
+4. **Windows:** Installer still starten (`/SILENT /LPTABWAITPID=<pid> /LPTABREADY=<datei> /LPTABRESTART=1`).
+   Erst wenn der Installer nach der Windows-Sicherheitsabfrage mit Administratorrechten läuft und die
+   Bereit-Datei anlegt, beendet sich das Programm – wird die Abfrage abgelehnt, läuft es einfach
+   weiter. Der Installer wartet auf das Prozessende, ersetzt die Dateien und startet das Programm als
+   normaler Benutzer neu. **Linux:** Archiv neben den Programmordner entpacken, die
    *neue* Version übernimmt als Hilfsprozess (`--finish-update`) den Ordnertausch und startet neu;
    ohne Schreibrechte über `pkexec install.sh --update`.
 

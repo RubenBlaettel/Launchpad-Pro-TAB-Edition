@@ -40,6 +40,7 @@ class TaskRunner(QObject):
         # Einen Kern für Audio + Oberfläche freihalten
         self._workers = max(1, min(6, cpu - 1))
         self._use_processes = use_processes
+        self._want_processes = use_processes
         self._pool: ProcessPoolExecutor | None = None
         self._pool_failures = 0
         self._pool_broken = False
@@ -170,6 +171,10 @@ class TaskRunner(QObject):
                 pool.shutdown(wait=True, cancel_futures=True)
             except Exception:  # noqa: BLE001
                 log.exception("Worker-Prozesse ließen sich nicht sauber beenden")
+
+    def resume_processes(self) -> None:
+        """Nach :meth:`stop_processes` wieder Worker-Prozesse verwenden (Pool entsteht bei Bedarf)."""
+        self._use_processes = self._want_processes and self._pool_failures < MAX_POOL_FAILURES
 
     def shutdown(self) -> None:
         self._threads.shutdown(wait=False, cancel_futures=True)

@@ -38,6 +38,7 @@ log = logging.getLogger(__name__)
 
 CHECK_INTERVAL_MS = 12 * 60 * 60 * 1000
 STARTUP_DELAY_MS = 4000
+READY_TIMEOUT_S = 300      # ohne Prozess-Handle: so lange auf den Installer warten
 
 
 def _mb(n: int) -> str:
@@ -67,8 +68,10 @@ class UpdateController(PropertyObject):
         self._dl_start = 0.0
         # Wird vom Backend gesetzt: speichert das Projekt und gibt Audio/Worker frei
         self.prepare_hook = None
+        self.resume_hook = None       # nach abgebrochener Installation weiterarbeiten
         self.project_hook = None
         self.busy_hook = None
+        self._installer: tuple | None = None
 
         self._state = "idle"
         self._message = ""
@@ -81,6 +84,9 @@ class UpdateController(PropertyObject):
         self._periodic = QTimer(self)
         self._periodic.setInterval(CHECK_INTERVAL_MS)
         self._periodic.timeout.connect(lambda: self.check(False))
+        self._installer_timer = QTimer(self)
+        self._installer_timer.setInterval(250)
+        self._installer_timer.timeout.connect(self._watch_installer)
 
     # ------------------------------------------------------------------
     # Properties
@@ -290,15 +296,46 @@ class UpdateController(PropertyObject):
             elif self._kind in (InstallKind.WINDOWS_INSTALLER, InstallKind.WINDOWS_PORTABLE):
                 self._prepare()
                 silent = self._kind is InstallKind.WINDOWS_INSTALLER
+                ready = package.with_name(f"bereit-{os.getpid()}.flag")
+                ready.unlink(missing_ok=True)
                 args = install.windows_installer_args(wait_pid=os.getpid(), silent=silent, restart=silent,
-                                                      log_file=package.with_name("installation.log"))
-                install.start_windows_installer(package, args)
-                self.quitRequested.emit()
+                                                      ready_file=ready, log_file=package.with_name("installation.log"))
+                proc = install.start_windows_installer(package, args)
+                self._set_state("installing", "Bitte die Windows-Sicherheitsabfrage bestätigen – danach wird "
+                                              "Launchpad Pro beendet, aktualisiert und neu gestartet …")
+                self._installer = (proc, ready, time.monotonic())
+                self._installer_timer.start()
             else:
                 raise InstallError(install.install_hint(self._kind))
         except (InstallError, OSError) as exc:
             log.exception("Update konnte nicht installiert werden")
             self._set_state("error", f"Update fehlgeschlagen: {exc}")
+
+    def _watch_installer(self) -> None:
+        """Beenden erst, wenn der Installer mit Administratorrechten läuft (Bereit-Datei)."""
+        if self._installer is None:
+            self._installer_timer.stop()
+            return
+        proc, ready, started = self._installer
+        if ready.exists():
+            self._installer_timer.stop()
+            self._installer = None
+            try:
+                ready.unlink()
+            except OSError:
+                pass
+            self.quitRequested.emit()
+            return
+        ended = proc.poll() is not None if proc is not None else time.monotonic() - started > READY_TIMEOUT_S
+        if ended:
+            self._installer_timer.stop()
+            self._installer = None
+            log.warning("Installer beendet, ohne zu starten (Code %s)", proc.returncode if proc is not None else "?")
+            if self.resume_hook is not None:
+                self.resume_hook()
+            self._set_state("error", "Das Update wurde nicht installiert – die Windows-Sicherheitsabfrage wurde "
+                                     "abgelehnt oder der Installer konnte nicht starten. Launchpad Pro läuft "
+                                     "normal weiter; das Update lässt sich jederzeit erneut starten.")
 
     def _prepare(self) -> None:
         if self.prepare_hook is not None and not self.prepare_hook():
@@ -354,3 +391,4 @@ class UpdateController(PropertyObject):
         self._cancel.set()
         self._poll.stop()
         self._periodic.stop()
+        self._installer_timer.stop()

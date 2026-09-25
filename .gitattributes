@@ -6,4 +6,3 @@
 *.ttf binary
 *.png binary
 *.ico binary
-*.sh text eol=lf

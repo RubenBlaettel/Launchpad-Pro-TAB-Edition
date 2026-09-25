@@ -85,6 +85,7 @@ class Backend(PropertyObject):
         self._editor = EditorController(self, self)
         self._updater = UpdateController(runner, settings, self)
         self._updater.prepare_hook = self.prepare_for_update
+        self._updater.resume_hook = self.runner.resume_processes
         self._updater.project_hook = lambda: str(self.project.root) if self.project is not None else None
         self._updater.busy_hook = self._set_busy
         self._pcm: dict[Key, np.ndarray] = {}

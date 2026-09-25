@@ -67,11 +67,15 @@ Start-Sleep -Seconds 8
 Assert (-not $app.HasExited) "Programm läuft (Instanz-Mutex aktiv)"
 Get-ChildItem $AppDir -Filter "*.marker" -ErrorAction SilentlyContinue | Remove-Item
 Set-Content -Path (Join-Path $AppDir "_internal\veraltet.marker") -Value "alt"
-$setupArgs = @("/SILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/LPTABWAITPID=$($app.Id)", "/LPTABRESTART=1")
+$ready = Join-Path $Logs "bereit.flag"
+Remove-Item $ready -ErrorAction SilentlyContinue
+$setupArgs = @("/SILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/LPTABWAITPID=$($app.Id)", "/LPTABREADY=`"$ready`"", "/LPTABRESTART=1")
 $log = Join-Path $Logs "3-update.log"
 $upd = Start-Process -FilePath $Setup -ArgumentList ($setupArgs + "/LOG=`"$log`"") -PassThru
 $null = $upd.Handle   # nötig, damit ExitCode später verfügbar ist
-Start-Sleep -Seconds 6
+for ($i = 0; $i -lt 60 -and -not (Test-Path $ready); $i++) { Start-Sleep -Seconds 1 }
+Assert (Test-Path $ready) "Installer meldet Bereitschaft (LPTABREADY), bevor das Programm endet"
+Start-Sleep -Seconds 3
 Assert (-not $upd.HasExited) "Installer wartet auf das Beenden des Programms"
 # Das Programm beendet sich beim echten Update selbst – hier simuliert
 Stop-Process -Id $app.Id

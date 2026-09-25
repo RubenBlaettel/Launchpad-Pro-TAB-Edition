@@ -2,9 +2,25 @@
 
 from __future__ import annotations
 
+import subprocess
+import sys
+import textwrap
 import uuid
 
-from conftest import wait_until
+from conftest import ROOT, wait_until
+
+
+def _second_start(name: str, payload: dict) -> subprocess.Popen:
+    """Zweiter Programmstart als eigener Prozess (wie im echten Betrieb)."""
+    code = textwrap.dedent(f"""
+        import sys
+        sys.path.insert(0, {str(ROOT)!r})
+        from PySide6.QtCore import QCoreApplication
+        from launchpad_pro_tab.bridge.single_instance import SingleInstance
+        app = QCoreApplication(sys.argv)
+        print("weitergeleitet" if SingleInstance({name!r}).forward({payload!r}) else "keine-instanz")
+    """)
+    return subprocess.Popen([sys.executable, "-c", code], stdout=subprocess.PIPE, text=True)
 
 
 def test_second_start_is_forwarded(qapp):
@@ -15,14 +31,21 @@ def test_second_start_is_forwarded(qapp):
     received = []
     first.messageReceived.connect(received.append)
     try:
-        assert not SingleInstance(name).forward({"action": "activate"})   # noch niemand da
+        proc = _second_start(name, {"action": "activate"})           # noch niemand da
+        assert wait_until(qapp, lambda: proc.poll() is not None, 30)
+        assert proc.stdout.read().strip() == "keine-instanz"
+
         assert first.listen()
-        assert SingleInstance(name).forward({"action": "activate", "project": "/tmp/Show"})
-        assert wait_until(qapp, lambda: len(received) == 1, 5)
-        assert received[0] == {"action": "activate", "project": "/tmp/Show"}
+        proc = _second_start(name, {"action": "activate", "project": "/tmp/Show"})
+        assert wait_until(qapp, lambda: proc.poll() is not None and received, 30)
+        assert proc.stdout.read().strip() == "weitergeleitet"
+        assert received == [{"action": "activate", "project": "/tmp/Show"}]
     finally:
         first.close()
-    assert not SingleInstance(name).forward({"action": "activate"})       # wieder frei
+
+    proc = _second_start(name, {"action": "activate"})               # wieder frei
+    assert wait_until(qapp, lambda: proc.poll() is not None, 30)
+    assert proc.stdout.read().strip() == "keine-instanz"
 
 
 def test_windows_integration_is_harmless_elsewhere():

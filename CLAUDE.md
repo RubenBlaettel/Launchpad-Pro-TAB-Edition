@@ -188,8 +188,10 @@ verwerfen veraltete Ergebnisse.
 `fetch_releases` → `pick_update` → `updateFound` (QML: Toast + Knopf `updatePill`) →
 `startUpdate()` → Thread: `resolve_checksum` + `download` (Fortschritt per 100-ms-Timer) →
 `_install`: `prepare_hook` = `Backend.prepare_for_update()` (Audio stoppen, speichern,
-Worker-Prozesse beenden) → **Windows**: Installer `/SILENT /LPTABWAITPID /LPTABRESTART` starten,
-`quitRequested` → QML `Qt.quit()`; Inno wartet in `InitializeSetup` auf den Prozess, ersetzt
+Worker-Prozesse beenden) → **Windows**: Installer `/SILENT /LPTABWAITPID /LPTABREADY /LPTABRESTART`
+starten; erst wenn Setup (mit Adminrechten) die `LPTABREADY`-Datei anlegt → `quitRequested` →
+QML `Qt.quit()`; endet der Installer vorher (UAC abgelehnt) → `resume_hook` (Worker wieder an),
+Fehlermeldung, Programm läuft weiter. Inno wartet in `InitializeSetup` auf den Prozess, ersetzt
 `_internal` komplett, startet per `runasoriginaluser` neu → **Linux**: `extract_bundle` neben den
 Programmordner, `spawn_detached(<neu>/LaunchpadProTAB --finish-update <ordner> --wait-pid <pid> -- --project …)`,
 beenden; der Hilfsprozess tauscht die Ordner und `execv`t die neue Version. Beim nächsten Start
@@ -219,7 +221,7 @@ räumt `updater.cleanup()` Downloads und `.alt-*`-Ordner weg; `Backend._announce
   `release.yml`/Build-Skripten und `update/install.py` (`WINDOWS_ASSET`, `LINUX_ASSET`).
 - **Installer:** `AppIdGuid` im .iss **niemals ändern** (Updates/Deinstallation hängen daran).
   `AppMutexName`/`AppUserModelId` im .iss = `system/integration.py` (Test prüft das).
-- Update-/Installer-Parameter (`/LPTABWAITPID`, `/LPTABRESTART`, `/LPTABPURGE`, `--purge-user-data`,
+- Update-/Installer-Parameter (`/LPTABWAITPID`, `/LPTABREADY`, `/LPTABRESTART`, `/LPTABPURGE`, `--purge-user-data`,
   `--finish-update`, `--wait-pid`) sind Schnittstellen – Änderungen immer an beiden Seiten + Tests.
 
 ## 5. Stolperfallen (bereits einmal passiert)
@@ -262,6 +264,12 @@ räumt `updater.cleanup()` Downloads und `.alt-*`-Ordner weg; `Backend._announce
   ist `ExitCode` leer. `Set-Content -Encoding UTF8` schreibt in Windows PowerShell 5 ein BOM.
 - Bash-Heredoc mit `<<'EOF'` endet an der ersten Zeile „EOF“ – auch mitten in eingebettetem
   Python-Code! Für Skripte mit solchen Zeilen andere Endmarken nutzen oder die Datei mit Write anlegen.
+- `pkill -f "<muster>"` trifft auch die eigene Shell, wenn das Muster in deren Befehlszeile steht.
+- Einzelinstanz unter Windows: Client und Server im **selben** Prozess funktionieren mit Named Pipes
+  nicht zuverlässig (blockierende Waits) → Test startet den zweiten Programmstart als eigenen Prozess;
+  der Server bestätigt jeden Auftrag (`ok`), damit keine Daten beim schnellen Beenden verloren gehen.
+- Inno: Die Selbst-Erhöhung (UAC) passiert **vor** `[Code]` – `InitializeSetup` läuft nur im
+  erhöhten Prozess; lehnt man UAC ab, endet Setup mit `ecCancelledBeforeInstall`.
 
 ## 6. Teststrategie
 
