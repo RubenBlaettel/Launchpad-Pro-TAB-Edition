@@ -6,11 +6,20 @@
 ISCC wird gesucht über die Umgebungsvariable ``ISCC`` (darf auch einen Befehl mit Argumenten
 enthalten, z. B. ``wine C:\\InnoSetup\\ISCC.exe``), den Suchpfad und die üblichen
 Installationsordner von Inno Setup 7.
+
+Signieren (Windows 11 blockiert unsignierte Installer mit der intelligenten App-Steuerung):
+
+* ``--sign-tool "signtool sign /a /fd sha256 /tr http://timestamp.digicert.com /td sha256 $f"``
+  signiert beim Bauen mit einem lokalen Werkzeug (Setup, Deinstaller, Setup-Hilfsdatei).
+* ``--signed-uninstaller-dir ORDNER`` für externe Signaturdienste (SignPath, siehe
+  ``tools/signing.py``): Fehlt dort die signierte ``uninst-*.e64``, legt Inno sie unsigniert an und
+  das Skript endet mit Code 3 („bitte signieren“); nach dem Signieren erneut aufrufen.
 """
 
 from __future__ import annotations
 
 import argparse
+import glob
 import hashlib
 import os
 import re
@@ -22,6 +31,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / "tools"))
+
+from signing import is_signed  # noqa: E402
+
+SIGNATURE_NEEDED = 3        # Exitcode: Deinstaller muss erst (extern) signiert werden
 
 ISS = ROOT / "packaging" / "windows" / "LaunchpadProTAB.iss"
 
@@ -66,6 +80,10 @@ def main() -> int:
     ap.add_argument("--source", type=Path, default=ROOT / "dist" / "LaunchpadProTAB",
                     help="Programmordner aus dem PyInstaller-Build")
     ap.add_argument("--output", type=Path, default=ROOT / "dist", help="Zielordner für den Installer")
+    ap.add_argument("--sign-tool", metavar="BEFEHL",
+                    help="Signierbefehl für ISCC mit $f als Platzhalter für die Datei (signiert beim Bauen)")
+    ap.add_argument("--signed-uninstaller-dir", type=Path, metavar="ORDNER",
+                    help="Ordner für den extern signierten Deinstaller (Inno SignedUninstallerDir)")
     args = ap.parse_args()
 
     exe = args.source / "LaunchpadProTAB.exe"
@@ -79,11 +97,23 @@ def main() -> int:
         f"/DAppVersionNumeric={numeric_version(args.version)}",
         f"/DSourceDir={tool_path(args.source.resolve(), iscc)}",
         f"/DOutputDir={tool_path(args.output.resolve(), iscc)}",
-        tool_path(ISS, iscc),
     ]
+    if args.sign_tool:
+        cmd += [f"/Slptabsign={args.sign_tool}", "/DSignToolName=lptabsign"]
+    unsigned_dir = args.signed_uninstaller_dir
+    if unsigned_dir is not None:
+        unsigned_dir = unsigned_dir.resolve()
+        unsigned_dir.mkdir(parents=True, exist_ok=True)
+        cmd.append(f"/DSignedUninstallerDir={tool_path(unsigned_dir, iscc)}")
+    cmd.append(tool_path(ISS, iscc))
     print("»", " ".join(cmd), flush=True)
     rc = subprocess.run(cmd).returncode
     if rc != 0:
+        pending = [Path(p) for p in glob.glob(str(unsigned_dir / "uninst-*.e*"))] if unsigned_dir else []
+        pending = [p for p in pending if not is_signed(p)]
+        if pending:
+            print("Bitte signieren und danach erneut bauen:\n  " + "\n  ".join(map(str, pending)), flush=True)
+            return SIGNATURE_NEEDED
         return rc
     setup = args.output / f"LaunchpadProTAB-Setup-{args.version}.exe"
     if not setup.is_file():

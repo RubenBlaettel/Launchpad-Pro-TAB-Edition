@@ -18,6 +18,7 @@ ApplicationWindow {
     font.family: Theme.fontFamily
 
     property bool forceQuit: false
+    property bool consentAsked: false
     readonly property bool dialogOpen: UiState.modalOpen   // irgendein Dialog / die Projektauswahl offen
 
     // Vollbild (Einstellungen → Darstellung, F11): Fenster und gespeicherte Einstellung gleich halten
@@ -234,6 +235,7 @@ ApplicationWindow {
         onShowUpdateRequested: updateDialog.open()
     }
     UpdateDialog { id: updateDialog; objectName: "updateDialog" }
+    UpdateConsentDialog { id: consentDialog; objectName: "updateConsentDialog" }
     InfoDialog { id: infoDialog }
     ConfirmDialog {
         id: shrinkDialog
@@ -277,6 +279,18 @@ ApplicationWindow {
         }
         // Installer/Neustart übernimmt – Projekt ist bereits gespeichert
         function onQuitRequested() { win.forceQuit = true; Qt.quit() }
+    }
+    // Einmalige Frage zur Update-Suche – nicht während einer Vorstellung und nicht über anderen Dialogen
+    Timer {
+        interval: 700
+        repeat: true
+        running: updater.consentPending && !win.consentAsked
+        onTriggered: {
+            if (!backend.showMode && !win.dialogOpen) {
+                win.consentAsked = true
+                consentDialog.open()
+            }
+        }
     }
 
     // ------------------------------------------------ Tastenkürzel

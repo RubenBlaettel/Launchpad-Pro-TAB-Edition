@@ -21,6 +21,7 @@ FOOTER = """
 
 - **Windows:** `LaunchpadProTAB-Setup-{v}.exe` herunterladen und ausführen.
 - **Linux:** `LaunchpadProTAB-{v}-linux-x86_64.tar.gz` entpacken und `./install.sh` ausführen.
+- *Source code (zip/tar.gz)* fügt GitHub automatisch hinzu – das ist nur der Quellcode, kein Installer.
 
 Bereits installierte Programme melden das Update beim nächsten Start und installieren es auf Wunsch automatisch.
 """

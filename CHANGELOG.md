@@ -30,6 +30,14 @@ Update-Dialog des Programms angezeigt.
 - **Vollbild-Schalter** unter *Einstellungen › Darstellung*. Die Wahl bleibt gespeichert – das
   Programm startet dann direkt im Vollbild. `F11` schaltet weiterhin um und hält den Schalter
   aktuell; `--fullscreen` gilt nur für den jeweiligen Start.
+- **Update-Suche nur mit Zustimmung:** Beim ersten Start fragt Launchpad Pro einmal, ob es
+  automatisch nach Updates suchen darf – vorher baut das Programm keine Verbindung ins Internet auf.
+  Änderbar unter *Einstellungen › Updates*; die Suche per Knopfdruck geht immer.
+- **Digitale Signatur (vorbereitet):** Installer, Deinstaller, Programm und mitgelieferte
+  Bibliotheken ohne Herstellersignatur werden über SignPath signiert, sobald die kostenlose
+  Open-Source-Signatur eingerichtet ist. Dann blockiert die *intelligente App-Steuerung* von
+  Windows 11 die Installation nicht mehr (Fehler 4551).
+- **Open Source:** Launchpad Pro steht unter der MIT-Lizenz; Lizenztexte liegen im Programmordner.
 
 ### Verbessert
 
@@ -40,6 +48,7 @@ Update-Dialog des Programms angezeigt.
   Schläge), das Stereobild bleibt erhalten. Vorschau und gespeicherte Fassung klingen weiterhin
   gleich. Bereits gespeicherte Bearbeitungen behalten ihren Klang, bis man sie erneut speichert
   (Kachel bearbeiten → *Speichern*).
+- README: Datenschutzerklärung, Code-Signatur-Richtlinie und Hilfe bei „Fehler 4551“.
 
 ### Behoben
 

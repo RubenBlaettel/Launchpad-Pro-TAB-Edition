@@ -15,6 +15,7 @@ on:
 
 permissions:
   contents: write
+  actions: read     # SignPath lädt die zu signierenden Dateien als Artefakt dieses Laufs
 
 concurrency:
   group: release-${{ github.ref }}
@@ -44,6 +45,9 @@ jobs:
   build:
     needs: version
     uses: ./.github/workflows/build.yml
+    with:
+      sign: true          # über SignPath, sobald eingerichtet (Variablen SIGNPATH_*), sonst unsigniert
+    secrets: inherit
 
   publish:
     name: Release veröffentlichen

@@ -3,6 +3,8 @@
 Prüft beim Start (und danach alle 12 Stunden) im Hintergrund, ob auf GitHub eine neuere
 Version veröffentlicht wurde, zeigt Hinweis + Versionshinweise und führt das Update auf
 Wunsch vollständig aus (Download -> Prüfsumme -> Installer bzw. Ordnertausch -> Neustart).
+Die automatische Suche läuft nur mit Zustimmung: Beim ersten Start wird einmal gefragt
+(``consentPending``), bis dahin baut das Programm keine Verbindung auf.
 Netzwerkfehler (z. B. Bühnenrechner ohne Internet) werden beim automatischen Prüfen
 still protokolliert – es erscheint dann einfach kein Hinweis.
 """
@@ -50,6 +52,7 @@ class UpdateController(PropertyObject):
     releaseChanged = Signal()
     progressChanged = Signal()
     optionsChanged = Signal()
+    consentChanged = Signal()
     updateFound = Signal(str, arguments=["version"])
     quitRequested = Signal()
 
@@ -73,6 +76,7 @@ class UpdateController(PropertyObject):
         self.busy_hook = None
         self._installer: tuple | None = None
 
+        self._consent_pending = False
         self._state = "idle"
         self._message = ""
         self._progress = 0.0
@@ -126,7 +130,9 @@ class UpdateController(PropertyObject):
         return install.install_hint(self._kind)
 
     installHint = Property(str, _hint, notify=releaseChanged)
-    autoCheck = Property(bool, lambda self: bool(self._settings.update_auto_check), notify=optionsChanged)
+    autoCheck = Property(bool, lambda self: self._settings.update_check is True, notify=optionsChanged)
+    # Einmalige Frage „Beim Start nach Updates suchen?“ steht aus (erst nach start())
+    consentPending = rprop(bool, "_consent_pending", consentChanged)
     includePrereleases = Property(bool, lambda self: bool(self._settings.update_prereleases), notify=optionsChanged)
 
     def _last_check(self) -> str:
@@ -154,15 +160,35 @@ class UpdateController(PropertyObject):
     # Start / Einstellungen
     # ------------------------------------------------------------------
     def start(self, delay_ms: int = STARTUP_DELAY_MS) -> None:
-        """Automatische Prüfung kurz nach dem Start (die Oberfläche lädt zuerst)."""
-        if self._settings.update_auto_check:
+        """Automatische Prüfung kurz nach dem Start (die Oberfläche lädt zuerst) – nur mit
+        Zustimmung. Wurde noch nie gefragt, fragt die Oberfläche einmal nach (``consentPending``)."""
+        if self._settings.update_check is None:
+            QTimer.singleShot(delay_ms, self._ask_consent)
+        elif self._settings.update_check:
             QTimer.singleShot(delay_ms, lambda: self.check(False))
             self._periodic.start()
 
+    def _ask_consent(self) -> None:
+        if self._settings.update_check is None:
+            self._set_consent_pending(True)
+
+    def _set_consent_pending(self, pending: bool) -> None:
+        if pending != self._consent_pending:
+            self._consent_pending = pending
+            self.consentChanged.emit()
+
+    @Slot(bool)
+    def answerConsent(self, enabled: bool) -> None:  # noqa: N802
+        """Antwort auf die einmalige Frage; bei „Ja“ wird gleich gesucht."""
+        self.setAutoCheck(enabled)
+        if enabled:
+            QTimer.singleShot(300, lambda: self.check(False))
+
     @Slot(bool)
     def setAutoCheck(self, enabled: bool) -> None:  # noqa: N802
-        self._settings.update_auto_check = bool(enabled)
+        self._settings.update_check = bool(enabled)
         self._settings.save()
+        self._set_consent_pending(False)
         if enabled:
             self._periodic.start()
         else:

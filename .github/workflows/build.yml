@@ -1,9 +1,20 @@
 # Wiederverwendbarer Build: Tests, Windows-Programm + Installer, Linux-Paket.
 # Aufgerufen von ci.yml (jeder Push) und release.yml (Veröffentlichung).
+#
+# Signatur der Windows-Dateien (Umgebungsvariable SIGNATUR im Windows-Job):
+#   signpath – Release und SignPath eingerichtet (Repository-Variablen SIGNPATH_*, Secret
+#              SIGNPATH_API_TOKEN): zwei Signaturanfragen, jede muss in SignPath freigegeben werden
+#   keine    – Release ohne SignPath-Einrichtung: unsigniert wie bisher
+#   test     – jeder CI-Lauf: kompletter Ablauf mit einem Test-Zertifikat (nicht vertrauenswürdig)
 name: Build
 
 on:
   workflow_call:
+    inputs:
+      sign:
+        description: "Release-Signatur über SignPath (falls eingerichtet)"
+        type: boolean
+        default: false
 
 jobs:
   tests:
@@ -40,6 +51,8 @@ jobs:
     runs-on: windows-latest
     env:
       PYTHONUTF8: "1"
+      SIGNATUR: ${{ inputs.sign && (vars.SIGNPATH_ORGANIZATION_ID != '' && 'signpath' || 'keine') || 'test' }}
+      NUR_EIGENE: ${{ vars.SIGNIEREN_NUR_EIGENE_DATEIEN }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
@@ -72,8 +85,109 @@ jobs:
           $p = Start-Process -FilePath $file -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/SP-", "/DIR=C:\InnoSetup" -Wait -PassThru
           if ($p.ExitCode -ne 0) { throw "Installation von Inno Setup fehlgeschlagen (Code $($p.ExitCode))" }
           "ISCC=C:\InnoSetup\ISCC.exe" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
-      - name: Installer bauen
+      - name: Installer bauen (unsigniert)
+        if: env.SIGNATUR == 'keine'
         run: python tools/build_installer.py
+      - name: Zu signierende Dateien sammeln (1. Installer-Durchlauf legt den Deinstaller an)
+        if: env.SIGNATUR != 'keine'
+        shell: pwsh
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $false     # Code 3 ist hier erwartet
+          python tools/build_installer.py --signed-uninstaller-dir build/inno-signiert
+          if ($LASTEXITCODE -ne 3) { throw "Erwartet Code 3 (Deinstaller signieren), erhalten: $LASTEXITCODE" }
+          $extra = @(); if ($env:NUR_EIGENE -eq 'true') { $extra += '--nur-eigene' }
+          python tools/signing.py sammeln --programm dist/LaunchpadProTAB --inno build/inno-signiert `
+            --ziel build/zu-signieren --liste build/signieren.json @extra
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+      - name: Programmdateien signieren (Test-Zertifikat)
+        if: env.SIGNATUR == 'test'
+        shell: powershell     # Windows PowerShell: New-SelfSignedCertificate/Set-AuthenticodeSignature nativ
+        run: |
+          Copy-Item build/zu-signieren build/signiert -Recurse
+          ./tools/test_sign.ps1 -Pfad build/signiert
+      - name: Programmdateien für SignPath hochladen
+        id: upload-programm
+        if: env.SIGNATUR == 'signpath'
+        uses: actions/upload-artifact@v4
+        with:
+          name: zu-signieren-programm
+          path: build/zu-signieren/
+          retention-days: 1
+      - name: Programmdateien signieren (SignPath – Freigabe in SignPath nötig)
+        if: env.SIGNATUR == 'signpath'
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG || 'Launchpad-Pro-TAB-Edition' }}
+          signing-policy-slug: ${{ vars.SIGNPATH_POLICY_SLUG || 'release-signing' }}
+          artifact-configuration-slug: ${{ vars.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG || 'windows' }}
+          github-artifact-id: ${{ steps.upload-programm.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 7200
+          output-artifact-directory: build/signiert
+      - name: Signierte Dateien einsetzen und Installer bauen (2. Durchlauf)
+        if: env.SIGNATUR != 'keine'
+        shell: pwsh
+        run: |
+          python tools/signing.py einsetzen --quelle build/signiert --liste build/signieren.json
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          python tools/build_installer.py --signed-uninstaller-dir build/inno-signiert
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+      - name: Smoke-Test der signierten EXE
+        if: env.SIGNATUR != 'keine'
+        shell: pwsh
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          $p = Start-Process -FilePath "dist\LaunchpadProTAB\LaunchpadProTAB.exe" -ArgumentList "--smoke-test" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { Write-Error "Smoke-Test der signierten EXE fehlgeschlagen (Code $($p.ExitCode))"; exit 1 }
+      - name: Installer signieren (Test-Zertifikat)
+        if: env.SIGNATUR == 'test'
+        shell: powershell
+        run: ./tools/test_sign.ps1 -Pfad "dist/LaunchpadProTAB-Setup-*.exe"
+      - name: Installer für SignPath hochladen
+        id: upload-setup
+        if: env.SIGNATUR == 'signpath'
+        uses: actions/upload-artifact@v4
+        with:
+          name: zu-signieren-setup
+          path: dist/LaunchpadProTAB-Setup-*.exe
+          retention-days: 1
+      - name: Installer signieren (SignPath – Freigabe in SignPath nötig)
+        if: env.SIGNATUR == 'signpath'
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG || 'Launchpad-Pro-TAB-Edition' }}
+          signing-policy-slug: ${{ vars.SIGNPATH_POLICY_SLUG || 'release-signing' }}
+          artifact-configuration-slug: ${{ vars.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG || 'windows' }}
+          github-artifact-id: ${{ steps.upload-setup.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 7200
+          output-artifact-directory: build/setup-signiert
+      - name: Signierten Installer übernehmen
+        if: env.SIGNATUR == 'signpath'
+        shell: pwsh
+        run: Copy-Item build/setup-signiert/LaunchpadProTAB-Setup-*.exe dist/ -Force
+      - name: Signaturen prüfen
+        if: env.SIGNATUR != 'keine'
+        shell: pwsh
+        run: |
+          $extra = @(); if ($env:NUR_EIGENE -eq 'true') { $extra += '--nur-eigene' }
+          python tools/signing.py pruefen --programm dist/LaunchpadProTAB --setup "dist/LaunchpadProTAB-Setup-*.exe" @extra
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          # Mit SignPath muss jede vorhandene Signatur gültig und vertrauenswürdig sein
+          $files = @(Get-ChildItem dist -Recurse -File -Include *.exe, *.dll, *.pyd)
+          $bad = @($files | Where-Object {
+              $s = (Get-AuthenticodeSignature -FilePath $_.FullName).Status
+              if ($env:SIGNATUR -eq 'signpath') { $s -ne 'Valid' -and $s -ne 'NotSigned' } else { $s -eq 'HashMismatch' }
+          })
+          $bad | ForEach-Object { Write-Host "Ungültige Signatur: $($_.FullName)" }
+          if ($bad.Count -gt 0) { exit 1 }
+          $setup = Get-ChildItem "dist/LaunchpadProTAB-Setup-*.exe" | Select-Object -First 1
+          Get-AuthenticodeSignature -FilePath $setup.FullName | Format-List Status, StatusMessage, SignerCertificate
       - name: Installer testen (Installation, Update, Deinstallation)
         shell: pwsh
         run: |
