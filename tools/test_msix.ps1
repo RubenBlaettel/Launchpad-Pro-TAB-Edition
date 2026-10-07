@@ -115,6 +115,15 @@ try {
     $text = Get-Content $report -Raw
     Write-Host "  Bericht: $text"
     $r = $text | ConvertFrom-Json
+    if ($r.code -ne 0) {
+        # Protokolle: Windows leitet AppData des Pakets nach %LOCALAPPDATA%\Packages\<Familie> um
+        $r.problems | ForEach-Object { Write-Host "---- Problem ----"; Write-Host $_ }
+        $dirs = @((Join-Path $env:LOCALAPPDATA "Packages\$($pkg.PackageFamilyName)"), (Join-Path $env:APPDATA "LaunchpadProTAB"))
+        Get-ChildItem $dirs -Recurse -Filter "*.log" -ErrorAction SilentlyContinue | ForEach-Object {
+            Write-Host "---- $($_.FullName) (letzte 40 Zeilen) ----"
+            Get-Content $_.FullName -Tail 40 | Write-Host
+        }
+    }
     Assert ($r.code -eq 0) "Smoke-Test im Paket erfolgreich"
     Assert ($r.install_kind -eq "microsoft-store") "Programm erkennt die Store-Fassung (keine eigenen Updates)"
     Assert ($r.package_family -like "$name*") "Paketfamilie $($r.package_family)"

@@ -359,7 +359,8 @@ def smoke_test(argv: list[str]) -> int:
     Protokoll Windows in den Paketordner umleitet).
     """
     report = os.environ.get("LPTAB_SMOKE_REPORT")
-    rc = _smoke_test(argv)
+    problems: list[str] = []
+    rc = _smoke_test(argv, problems)
     if report:
         import json
 
@@ -369,22 +370,22 @@ def smoke_test(argv: list[str]) -> int:
         try:
             Path(report).write_text(json.dumps({
                 "code": rc, "version": __version__, "install_kind": detect_install_kind().value,
-                "package_family": package_family_name(),
+                "package_family": package_family_name(), "problems": problems[-20:],
             }), encoding="utf-8")
         except OSError as exc:
             log.error("Smoke-Test-Bericht nicht geschrieben: %s", exc)
     return rc
 
 
-def _smoke_test(argv: list[str]) -> int:
+def _smoke_test(argv: list[str], problems: list[str]) -> int:
     import tempfile
+    import traceback
 
     from PySide6.QtCore import QTimer, qInstallMessageHandler
 
     tmp = tempfile.mkdtemp(prefix="lptab-smoke-")
     os.environ["LPTAB_CONFIG_DIR"] = tmp
     os.environ["LPTAB_PROJECTS_DIR"] = tmp
-    problems: list[str] = []
 
     def handler(_mode, context, message):
         if ".qml" in (context.file or "") or ".qml" in message or "module" in message.lower():
@@ -394,7 +395,8 @@ def _smoke_test(argv: list[str]) -> int:
     try:
         ctx = create_app(argv, no_audio=True)
     except Exception as exc:  # noqa: BLE001
-        log.critical("Smoke-Test fehlgeschlagen: %s", exc)
+        log.critical("Smoke-Test fehlgeschlagen: %s", exc, exc_info=True)
+        problems.append("".join(traceback.format_exception(exc))[-3000:])
         for p in problems:
             log.critical("  %s", p)
         return 2
