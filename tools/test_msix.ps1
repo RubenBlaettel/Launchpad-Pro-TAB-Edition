@@ -93,7 +93,7 @@ try {
     $pkg = Get-AppxPackage -Name $name
     Assert ($null -ne $pkg) "Paket installiert ($($pkg.PackageFullName))"
     Assert (Test-Path (Join-Path $pkg.InstallLocation "LaunchpadProTAB.exe")) "Programmdatei im Paket"
-    Assert (Test-Path (Join-Path $pkg.InstallLocation "_internal")) "Programmbibliotheken im Paket"
+    Assert (Test-Path (Join-Path $pkg.InstallLocation "_internal\PySide6")) "Programmbibliotheken im Paket (DLL-Suchpfad des Manifests)"
     Assert (Test-Path (Join-Path $pkg.InstallLocation "resources.pri")) "Bildvarianten (resources.pri)"
     $alias = Join-Path $env:LOCALAPPDATA "Microsoft\WindowsApps\LaunchpadProTAB.exe"
     Assert (Wait-Until { Test-Path $alias }) "App-Alias LaunchpadProTAB.exe angelegt"

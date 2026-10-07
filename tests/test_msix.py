@@ -24,6 +24,7 @@ NS = {
     "m": "http://schemas.microsoft.com/appx/manifest/foundation/windows10",
     "uap": "http://schemas.microsoft.com/appx/manifest/uap/windows10",
     "uap3": "http://schemas.microsoft.com/appx/manifest/uap/windows10/3",
+    "uap6": "http://schemas.microsoft.com/appx/manifest/uap/windows10/6",
     "desktop": "http://schemas.microsoft.com/appx/manifest/desktop/windows10",
     "rescap": "http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities",
 }
@@ -103,6 +104,9 @@ def test_manifest(tmp_path):
     assert root.find("m:Capabilities/rescap:Capability", NS).get("Name") == "runFullTrust"
     assert [e.text for e in app.iterfind(".//uap:FileType", NS)] == [".lptab"]
     assert app.find(".//desktop:ExecutionAlias", NS).get("Alias") == build_msix.EXE_NAME
+    # Im Paket gilt PATH nicht für DLLs – Qt-Plugins brauchen die Qt-Bibliotheken im Suchpfad
+    search = [e.get("FolderPath") for e in root.iterfind("m:Extensions//uap6:LoaderSearchPathEntry", NS)]
+    assert "_internal\\PySide6" in search and len(search) <= 5
     # Alle Bilder, auf die das Manifest verweist, legt build_msix an
     referenced = {v.split("\\")[-1] for el in root.iter() for k, v in el.attrib.items() if v.startswith("Assets\\")}
     referenced |= {el.text.split("\\")[-1] for el in root.iter() if (el.text or "").startswith("Assets\\")}

@@ -535,6 +535,12 @@ Installer-E2E-Test (prüft Signatur von EXE und `unins000.exe`) → Release.
   `surrogateescape`) → TypeError, MP3/M4A ließen sich nicht mehr laden. CI installiert immer die
   neueste Version, lokal lief noch 18.1 → erst in der CI aufgefallen. Abhilfe `decoder._av_open()`
   (mit Parameter versuchen, bei TypeError ohne); Test `test_decode_with_pyav_19_open_signature`.
+- **MSIX: `PATH` gilt nicht für DLLs.** Im Paket lud die Oberfläche nicht („Cannot load library
+  …\qml\QtQuick\Controls\Basic\qtquickcontrols2basicstyleplugin.dll: The specified module could not
+  be found“) – Qt-Plugins finden ihre Qt6*.dll in `_internal\PySide6` außerhalb des Pakets über PATH
+  (PyInstaller/PySide6), im Paket ignoriert Windows PATH. Abhilfe im Manifest:
+  `uap6:LoaderSearchPathOverride` mit `_internal\PySide6` und `_internal` (max. 5 Einträge, gilt für
+  alle Prozesse des Pakets inkl. Worker). Fehlertext liefert der Smoke-Test-Bericht (`problems`).
 - XML-Kommentare dürfen kein `--` enthalten (z. B. `--fullscreen` im Manifest-Kommentar → makeappx/
   ElementTree „not well-formed“). `string.Template` in `build_msix.py`: kein `$` mit geschweiften
   Klammern in Kommentaren der Vorlage.
