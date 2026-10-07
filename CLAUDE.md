@@ -652,7 +652,11 @@ Installer-E2E-Test (prüft Signatur von EXE und `unins000.exe`) → Release.
   `LPTAB_SMOKE_REPORT` grün, Paketordner + alle 30 Bildvarianten lokal erzeugt und angesehen,
   `test_msix.ps1` mit dem Parser von Windows PowerShell 5.1 geprüft. Paketbau mit makeappx/makepri
   und Installation des Pakets laufen nur in der CI (lokal kein Windows SDK, App-Steuerung an).
-  Store-Konto, Namensreservierung und erste Einreichung macht der Nutzer.
+  CI 1392d8b (GitHub Actions, windows-latest) komplett grün: MSIX (108 MB) gebaut, testsigniert
+  installiert, Alias + Dateizuordnung + resources.pri vorhanden, Smoke-Test im Paket (inkl.
+  Worker-Prozesse) meldet `microsoft-store` + Paketfamilie, Deinstallation sauber; Inno-Installer mit
+  App-Steuerungs-Hinweis kompiliert, Installations-/Update-/Deinstallationstest grün; Tests Linux +
+  Windows mit PyAV 19 grün. Store-Konto, Namensreservierung und erste Einreichung macht der Nutzer.
 - Nicht automatisch prüfbar (auf echter Hardware testen!): tatsächliche Ausgabelatenz mit WASAPI,
   Windows-Systemlautstärke per pycaw auf einem Rechner mit Audiogerät, Touch-Bedienung auf einem
   echten Touchscreen, native Datei-Dialoge, UAC-Abfrage beim Update (CI-Runner hat keine UAC),
