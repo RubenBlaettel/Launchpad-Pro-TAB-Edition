@@ -240,7 +240,10 @@ def main(argv: list[str] | None = None) -> int:
     if args.purge_user_data:
         return purge_user_data(confirmed=args.yes)
     setup_logging(args.verbose)
-    log.info("%s %s startet (Python %s, %s)", __app_name__, __version__, sys.version.split()[0], sys.platform)
+    from .update.install import detect_install_kind
+
+    log.info("%s %s startet (Python %s, %s, %s)", __app_name__, __version__, sys.version.split()[0],
+             sys.platform, detect_install_kind().value)
 
     # Der Audio-Thread braucht den GIL zügig: häufigere Thread-Wechsel = weniger Aussetzer
     sys.setswitchinterval(0.001)
@@ -351,8 +354,29 @@ def smoke_test(argv: list[str]) -> int:
     """Startet die komplette Oberfläche ohne Soundkarte, prüft auf QML-Fehler und beendet sich.
 
     Wird im CI gegen die fertige Windows-EXE ausgeführt, um fehlende QML-Module oder
-    Bibliotheken im Paket zu erkennen. Ergebnis zusätzlich im Protokoll.
+    Bibliotheken im Paket zu erkennen. Ergebnis zusätzlich im Protokoll und – falls
+    ``LPTAB_SMOKE_REPORT`` gesetzt ist – als JSON in dieser Datei (Test des Store-Pakets, dessen
+    Protokoll Windows in den Paketordner umleitet).
     """
+    report = os.environ.get("LPTAB_SMOKE_REPORT")
+    rc = _smoke_test(argv)
+    if report:
+        import json
+
+        from .system.integration import package_family_name
+        from .update.install import detect_install_kind
+
+        try:
+            Path(report).write_text(json.dumps({
+                "code": rc, "version": __version__, "install_kind": detect_install_kind().value,
+                "package_family": package_family_name(),
+            }), encoding="utf-8")
+        except OSError as exc:
+            log.error("Smoke-Test-Bericht nicht geschrieben: %s", exc)
+    return rc
+
+
+def _smoke_test(argv: list[str]) -> int:
     import tempfile
 
     from PySide6.QtCore import QTimer, qInstallMessageHandler

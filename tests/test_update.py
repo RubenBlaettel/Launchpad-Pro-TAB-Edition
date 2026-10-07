@@ -223,6 +223,20 @@ def test_detect_install_kind(tmp_path):
     if platform.machine().lower() in ("x86_64", "amd64"):
         assert install.detect_install_kind(frozen=True, platform_name="linux", directory=tmp_path) is InstallKind.LINUX_BUNDLE
     assert install.detect_install_kind(frozen=True, platform_name="darwin", directory=tmp_path) is InstallKind.UNSUPPORTED
+    # MSIX-Paket aus dem Microsoft Store – auch wenn ein Deinstaller daneben läge
+    assert install.detect_install_kind(frozen=True, platform_name="win32", directory=tmp_path,
+                                       packaged=True) is InstallKind.MS_STORE
+    assert install.detect_install_kind(frozen=False, packaged=True) is InstallKind.SOURCE
+    assert install.asset_pattern(InstallKind.MS_STORE) is None
+    assert all(install.install_hint(kind) for kind in InstallKind)
+
+
+def test_package_detection_outside_msix():
+    """Tests und Quellcode laufen nie als MSIX-Paket."""
+    from launchpad_pro_tab.system import integration
+
+    assert integration.package_family_name() is None
+    assert not install.is_packaged()
 
 
 def test_windows_installer_arguments(tmp_path):
@@ -252,6 +266,10 @@ def test_installer_script_matches_program():
     assert "#ifdef SignedUninstallerDir" in iss and "SignedUninstallerDir={#SignedUninstallerDir}" in iss
     assert "OutputBaseFilename=LaunchpadProTAB-Setup-{#AppVersion}" in iss
     assert "DefaultDirName={autopf}\\" in iss                      # C:\Program Files
+    # Intelligente App-Steuerung: Hinweis auf die Store-Fassung, nie bei stillen Updates
+    assert "VerifiedAndReputablePolicyState" in iss
+    assert "(not WizardSilent) and SmartAppControlActive()" in iss
+    assert "#ifdef StoreId" in iss and "ms-windows-store://pdp/?ProductId=" in iss
 
 
 def test_wait_for_pid():
@@ -514,6 +532,44 @@ def test_update_controller_offline_is_silent(qapp, tmp_path, monkeypatch):
         upd.checkNow()                          # manuell: verständliche Meldung
         assert wait_until(qapp, lambda: upd.state == "error", 10)
         assert "Verbindung" in upd.message or "Zeitüberschreitung" in upd.message
+    finally:
+        upd.shutdown()
+        runner.shutdown()
+
+
+def test_update_controller_store_version(qapp, github, tmp_path, monkeypatch):
+    """Microsoft-Store-Fassung: keine Zustimmungsfrage, keine Verbindung zu GitHub, keine Installation."""
+    from launchpad_pro_tab.bridge.tasks import TaskRunner
+    from launchpad_pro_tab.bridge.updater import UpdateController
+    from launchpad_pro_tab.core.settings import AppSettings
+
+    github.add_release("v9.0.0", {"LaunchpadProTAB-Setup-9.0.0.exe": b"MZ" + os.urandom(1000)})
+    monkeypatch.setenv("LPTAB_UPDATE_URL", github.url + "/api/releases")
+    settings = AppSettings.load(tmp_path / "e.json")
+    settings.update_check = True                         # auch mit früherer Zustimmung nicht suchen
+    runner = TaskRunner(use_processes=False)
+    upd = UpdateController(runner, settings, kind=InstallKind.MS_STORE)
+    opened = []
+    monkeypatch.setattr("launchpad_pro_tab.bridge.updater.QDesktopServices.openUrl",
+                        lambda url: opened.append(url.toString()) or True)
+    try:
+        assert upd.storeManaged and upd.installKind == "microsoft-store"
+        upd.start(delay_ms=20)
+        upd.checkNow()
+        wait_until(qapp, lambda: False, 0.6)
+        assert github.requests == [] and upd.state == "idle" and not upd.consentPending
+        assert "Microsoft Store" in upd.installHint
+        upd.startUpdate()
+        assert upd.state == "idle"
+        upd.openStore()
+        assert opened == ["ms-windows-store://downloadsandupdates"]
+
+        changed = []
+        upd.kindChanged.connect(lambda: changed.append(upd.storeManaged))
+        upd.set_install_kind(InstallKind.WINDOWS_INSTALLER)
+        assert changed == [False] and not upd.storeManaged
+        upd.checkNow()
+        assert wait_until(qapp, lambda: upd.state == "available", 10), upd.message
     finally:
         upd.shutdown()
         runner.shutdown()

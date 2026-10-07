@@ -1,5 +1,12 @@
 # Code-Signatur mit SignPath einrichten
 
+> **Stand 07.10.2026: abgelehnt.** Die SignPath Foundation hat den Antrag abgelehnt (zu geringe
+> Verbreitung des Projekts). Signiert wird stattdessen über den **Microsoft Store** – siehe
+> [`MICROSOFT_STORE.md`](MICROSOFT_STORE.md). Diese Anleitung und der Signierablauf im Workflow
+> bleiben für den Fall erhalten, dass später ein eigenes Zertifikat dazukommt (z. B. Azure Artifact
+> Signing über den Verein oder ein Open-Source-Zertifikat von Certum): Dann genügt es, die
+> SignPath-Schritte in `.github/workflows/build.yml` durch den neuen Signaturdienst zu ersetzen.
+
 **Warum?** Windows 11 blockiert mit der *intelligenten App-Steuerung* (Smart App Control) jedes
 Programm, das nicht digital signiert ist und das Microsoft noch nicht kennt – beim Installer von
 Launchpad Pro erscheint dann „Fehler 4551: Eine Anwendungssteuerungsrichtlinie hat diese Datei

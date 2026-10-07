@@ -239,15 +239,18 @@ def main() -> int:
     backend.setShowMode(False)
 
     # ------------------------------------------------------------------ Update-Hinweis
-    # Simuliertes Release 1.2.0 (keine Netzwerkverbindung nötig), Darstellung wie unter Windows
+    # Simuliertes nächstes Release (keine Netzwerkverbindung nötig), Darstellung wie unter Windows
     from datetime import datetime, timezone
 
+    from launchpad_pro_tab import __version__
     from launchpad_pro_tab.update.install import InstallKind
     from launchpad_pro_tab.update.releases import Asset, Release
     from launchpad_pro_tab.update.version import parse_version
 
+    major, minor = (int(x) for x in __version__.split(".")[:2])
+    nxt = f"{major}.{minor + 1}.0"
     notes = (
-        "## Neu in 1.2.0\n\n"
+        f"## Neu in {nxt}\n\n"
         "- **Cue-Liste:** Kacheln in eine feste Reihenfolge bringen und mit der Leertaste weiterschalten\n"
         "- **Fade-in/Fade-out** je Kachel einstellbar\n"
         "- Exklusiv-Gruppen: eine Kachel stoppt automatisch die anderen der Gruppe\n\n"
@@ -256,10 +259,10 @@ def main() -> int:
         "- Behoben: Coverbild wurde nach dem Umbenennen nicht aktualisiert\n"
     )
     release = Release(
-        version=parse_version("1.2.0"), tag="v1.2.0", title="Launchpad Pro TAB Edition 1.2.0", notes=notes,
-        html_url="https://github.com/RubenBlaettel/Launchpad-Pro-TAB-Edition/releases/tag/v1.2.0",
+        version=parse_version(nxt), tag=f"v{nxt}", title=f"Launchpad Pro TAB Edition {nxt}", notes=notes,
+        html_url=f"https://github.com/RubenBlaettel/Launchpad-Pro-TAB-Edition/releases/tag/v{nxt}",
         published=datetime(2026, 10, 12, 18, 0, tzinfo=timezone.utc), prerelease=False,
-        assets=[Asset("LaunchpadProTAB-Setup-1.2.0.exe", "https://example.invalid/setup.exe", 118_400_000, "0" * 64)],
+        assets=[Asset(f"LaunchpadProTAB-Setup-{nxt}.exe", "https://example.invalid/setup.exe", 118_400_000, "0" * 64)],
     )
     # Einmalige Frage beim ersten Start (automatische Update-Suche nur mit Zustimmung)
     call("updateConsentDialog", "open")
@@ -268,7 +271,14 @@ def main() -> int:
     wait(300)
 
     updater = backend.updater
-    updater._kind = InstallKind.WINDOWS_INSTALLER
+    # Microsoft-Store-Fassung: Updates über den Store, keine eigene Suche (vor dem simulierten Update)
+    updater.set_install_kind(InstallKind.MS_STORE)
+    call("settingsDialog", "openPage", 2)
+    grab("23_einstellungen_store.png")
+    call("settingsDialog", "close")
+    wait(300)
+
+    updater.set_install_kind(InstallKind.WINDOWS_INSTALLER)
     updater._manual = False
     updater._checked([release])
     wait(700)

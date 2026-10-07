@@ -21,6 +21,7 @@ from __future__ import annotations
 import argparse
 import glob
 import hashlib
+import json
 import os
 import re
 import shlex
@@ -38,6 +39,7 @@ from signing import is_signed  # noqa: E402
 SIGNATURE_NEEDED = 3        # Exitcode: Deinstaller muss erst (extern) signiert werden
 
 ISS = ROOT / "packaging" / "windows" / "LaunchpadProTAB.iss"
+STORE_JSON = ROOT / "packaging" / "msix" / "store.json"
 
 
 def find_iscc() -> list[str]:
@@ -63,6 +65,20 @@ def tool_path(path: Path, iscc: list[str]) -> str:
         return subprocess.run(["winepath", "-w", str(path)], check=True, capture_output=True,
                               text=True).stdout.strip()
     return str(path)
+
+
+def store_id(path: Path = STORE_JSON) -> str | None:
+    """Produkt-ID der Microsoft-Store-Fassung (z. B. 9NBLGGH4NNS1) – sobald die App im Store ist.
+
+    Der Installer verweist damit auf PCs mit intelligenter App-Steuerung direkt auf den Store.
+    """
+    try:
+        value = str(json.loads(path.read_text(encoding="utf-8")).get("store_id") or "").strip()
+    except (OSError, ValueError):
+        return None
+    if value and not re.fullmatch(r"[0-9A-Za-z]{12}", value):
+        raise SystemExit(f"Ungültige store_id in {path}: {value!r} (12 Zeichen aus Partner Center)")
+    return value.upper() or None
 
 
 def numeric_version(version: str) -> str:
@@ -98,6 +114,8 @@ def main() -> int:
         f"/DSourceDir={tool_path(args.source.resolve(), iscc)}",
         f"/DOutputDir={tool_path(args.output.resolve(), iscc)}",
     ]
+    if store := store_id():
+        cmd.append(f"/DStoreId={store}")
     if args.sign_tool:
         cmd += [f"/Slptabsign={args.sign_tool}", "/DSignToolName=lptabsign"]
     unsigned_dir = args.signed_uninstaller_dir

@@ -1,0 +1,8 @@
+{
+  "_hinweis": "Paket-Identität aus Partner Center (App › Produktverwaltung › Produktidentität), siehe docs/MICROSOFT_STORE.md. Leer = nur Testpaket (build_msix.py --test-identity).",
+  "display_name": "Launchpad Pro TAB Edition",
+  "identity_name": "",
+  "publisher": "",
+  "publisher_display_name": "",
+  "store_id": ""
+}

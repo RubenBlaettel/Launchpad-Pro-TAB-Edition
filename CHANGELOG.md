@@ -33,10 +33,12 @@ Update-Dialog des Programms angezeigt.
 - **Update-Suche nur mit Zustimmung:** Beim ersten Start fragt Launchpad Pro einmal, ob es
   automatisch nach Updates suchen darf – vorher baut das Programm keine Verbindung ins Internet auf.
   Änderbar unter *Einstellungen › Updates*; die Suche per Knopfdruck geht immer.
-- **Digitale Signatur (vorbereitet):** Installer, Deinstaller, Programm und mitgelieferte
-  Bibliotheken ohne Herstellersignatur werden über SignPath signiert, sobald die kostenlose
-  Open-Source-Signatur eingerichtet ist. Dann blockiert die *intelligente App-Steuerung* von
-  Windows 11 die Installation nicht mehr (Fehler 4551).
+- **Microsoft-Store-Fassung:** Launchpad Pro gibt es als MSIX-Paket für den Microsoft Store. Dort
+  signiert Microsoft das Programm – es startet damit auch auf PCs mit der *intelligenten
+  App-Steuerung* von Windows 11, die den unsignierten Installer blockiert (Fehler 4551). Updates
+  verteilt der Store automatisch; die Store-Fassung sucht nicht selbst im Internet.
+- **Installer erkennt die intelligente App-Steuerung** und weist auf die Store-Fassung hin, statt
+  ein Programm zu installieren, das danach nicht starten würde.
 - **Open Source:** Launchpad Pro steht unter der MIT-Lizenz; Lizenztexte liegen im Programmordner.
 
 ### Verbessert
@@ -48,10 +50,12 @@ Update-Dialog des Programms angezeigt.
   Schläge), das Stereobild bleibt erhalten. Vorschau und gespeicherte Fassung klingen weiterhin
   gleich. Bereits gespeicherte Bearbeitungen behalten ihren Klang, bis man sie erneut speichert
   (Kachel bearbeiten → *Speichern*).
-- README: Datenschutzerklärung, Code-Signatur-Richtlinie und Hilfe bei „Fehler 4551“.
+- README: Datenschutzerklärung, Code-Signatur und Hilfe bei „Fehler 4551“.
 
 ### Behoben
 
+- MP3-, M4A- und andere über FFmpeg gelesene Dateien ließen sich mit der neuesten FFmpeg-Anbindung
+  (PyAV 19) nicht mehr laden („unexpected keyword argument 'metadata_errors'“).
 - Touchmonitor: Das Kachel-Menü (lange drücken) schloss sich sofort wieder, wenn der Finger etwas
   länger lag. Windows macht aus „Gedrückt halten“ beim Loslassen einen Rechtsklick, der neben dem
   Menü landete. Diese Nachbildung ist im Programmfenster jetzt abgeschaltet und wird zusätzlich

@@ -1,4 +1,4 @@
-# Wiederverwendbarer Build: Tests, Windows-Programm + Installer, Linux-Paket.
+# Wiederverwendbarer Build: Tests, Windows-Programm + Microsoft-Store-Paket + Installer, Linux-Paket.
 # Aufgerufen von ci.yml (jeder Push) und release.yml (Veröffentlichung).
 #
 # Signatur der Windows-Dateien (Umgebungsvariable SIGNATUR im Windows-Job):
@@ -71,6 +71,23 @@ jobs:
           $p = Start-Process -FilePath "dist\LaunchpadProTAB\LaunchpadProTAB.exe" -ArgumentList "--smoke-test" -Wait -PassThru
           Get-Content "$env:APPDATA\LaunchpadProTAB\launchpad.log" -ErrorAction SilentlyContinue | Select-Object -Last 20
           if ($p.ExitCode -ne 0) { Write-Error "Smoke-Test fehlgeschlagen (Code $($p.ExitCode))"; exit 1 }
+      # Microsoft-Store-Paket aus den noch unveränderten Programmdateien (vor jeder Test-Signatur).
+      # Unsigniert – der Store signiert es selbst. Identität: packaging/msix/store.json
+      - name: Store-Paket bauen (MSIX)
+        run: python tools/build_msix.py --test-identity
+      - name: Store-Paket testen (Installation, Start, Deinstallation)
+        shell: powershell     # Windows PowerShell: Appx-Modul und New-SelfSignedCertificate nativ
+        run: |
+          $paket = Get-ChildItem "dist\LaunchpadProTAB-*.msix" | Select-Object -First 1
+          if (-not $paket) { Write-Host "Kein Store-Paket (Vorabversion)"; exit 0 }
+          ./tools/test_msix.ps1 -Paket $paket.FullName
+      - name: Store-Paket hochladen
+        uses: actions/upload-artifact@v4
+        with:
+          name: LaunchpadProTAB-Microsoft-Store
+          path: dist/LaunchpadProTAB-*.msix
+          if-no-files-found: ignore
+          retention-days: 90
       - name: Inno Setup 7 installieren
         shell: pwsh
         run: |

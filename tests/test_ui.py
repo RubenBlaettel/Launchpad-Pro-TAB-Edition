@@ -959,3 +959,42 @@ def test_update_consent_question(ctx):
     assert not updater.consentPending and updater.autoCheck
     wait_until(app, lambda: updater.state in ("idle", "uptodate", "available"), 5)   # Test-URL: kein Netz
     assert QML_ERRORS == []
+
+
+def test_settings_in_store_version(ctx, monkeypatch):
+    """Store-Fassung: Updates-Reiter zeigt den Store statt der eigenen Update-Suche."""
+    from PySide6.QtCore import QObject, Qt
+    from PySide6.QtTest import QTest
+
+    from launchpad_pro_tab.update.install import InstallKind
+
+    app, backend, win = ctx.app, ctx.backend, ctx.window
+    updater = backend.updater
+    original = InstallKind(updater.installKind)
+    opened = []
+    monkeypatch.setattr("launchpad_pro_tab.bridge.updater.QDesktopServices.openUrl",
+                        lambda url: opened.append(url.toString()) or True)
+    dlg = win.findChild(QObject, "settingsDialog")
+    try:
+        updater.set_install_kind(InstallKind.MS_STORE)
+        dlg.setProperty("page", 2)
+        dlg.open()
+        assert wait_until(app, lambda: dlg.property("opened"), 3)
+        wait_until(app, lambda: False, 0.3)
+        root = win.contentItem()
+        assert _find_item(root, "storeUpdateText").isVisible()
+        assert not _find_item(root, "checkUpdatesButton").isVisible()
+        assert not _find_item(root, "autoCheckSwitch").isVisible()
+        QTest.mouseClick(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier,
+                         _center(win, "storeUpdatesButton"))
+        assert wait_until(app, lambda: opened == ["ms-windows-store://downloadsandupdates"], 3)
+
+        updater.set_install_kind(original)               # zurück: eigene Update-Suche sichtbar
+        wait_until(app, lambda: False, 0.2)
+        assert _find_item(root, "checkUpdatesButton").isVisible()
+        assert not _find_item(root, "storeUpdateText").isVisible()
+    finally:
+        updater.set_install_kind(original)
+        dlg.close()
+        assert wait_until(app, lambda: not dlg.property("visible"), 3)
+    assert QML_ERRORS == []

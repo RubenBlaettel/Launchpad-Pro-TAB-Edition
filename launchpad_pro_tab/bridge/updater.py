@@ -7,6 +7,8 @@ Die automatische Suche läuft nur mit Zustimmung: Beim ersten Start wird einmal 
 (``consentPending``), bis dahin baut das Programm keine Verbindung auf.
 Netzwerkfehler (z. B. Bühnenrechner ohne Internet) werden beim automatischen Prüfen
 still protokolliert – es erscheint dann einfach kein Hinweis.
+In der Microsoft-Store-Fassung (MSIX) aktualisiert der Store das Programm; hier wird dann weder
+gefragt noch gesucht (``storeManaged``).
 """
 
 from __future__ import annotations
@@ -41,6 +43,7 @@ log = logging.getLogger(__name__)
 CHECK_INTERVAL_MS = 12 * 60 * 60 * 1000
 STARTUP_DELAY_MS = 4000
 READY_TIMEOUT_S = 300      # ohne Prozess-Handle: so lange auf den Installer warten
+STORE_UPDATES_URL = "ms-windows-store://downloadsandupdates"
 
 
 def _mb(n: int) -> str:
@@ -53,6 +56,7 @@ class UpdateController(PropertyObject):
     progressChanged = Signal()
     optionsChanged = Signal()
     consentChanged = Signal()
+    kindChanged = Signal()
     updateFound = Signal(str, arguments=["version"])
     quitRequested = Signal()
 
@@ -100,7 +104,16 @@ class UpdateController(PropertyObject):
     progress = rprop(float, "_progress", progressChanged)
     progressText = rprop(str, "_progress_text", progressChanged)
     currentVersion = Property(str, lambda self: __version__, constant=True)
-    installKind = Property(str, lambda self: self._kind.value, constant=True)
+    installKind = Property(str, lambda self: self._kind.value, notify=kindChanged)
+    # Microsoft-Store-Fassung: Updates kommen über den Store, eigene Suche/Installation aus
+    storeManaged = Property(bool, lambda self: self._kind is InstallKind.MS_STORE, notify=kindChanged)
+
+    def set_install_kind(self, kind: InstallKind) -> None:
+        """Installationsart nachträglich setzen (Tests, Screenshots)."""
+        if kind is not self._kind:
+            self._kind = kind
+            self.kindChanged.emit()
+            self.releaseChanged.emit()
 
     def _rel(self, attr: str, default: Any = "") -> Any:
         return getattr(self._release, attr) if self._release is not None else default
@@ -161,7 +174,11 @@ class UpdateController(PropertyObject):
     # ------------------------------------------------------------------
     def start(self, delay_ms: int = STARTUP_DELAY_MS) -> None:
         """Automatische Prüfung kurz nach dem Start (die Oberfläche lädt zuerst) – nur mit
-        Zustimmung. Wurde noch nie gefragt, fragt die Oberfläche einmal nach (``consentPending``)."""
+        Zustimmung. Wurde noch nie gefragt, fragt die Oberfläche einmal nach (``consentPending``).
+        Die Store-Fassung sucht nie selbst – das übernimmt der Microsoft Store."""
+        if self._kind is InstallKind.MS_STORE:
+            log.info("Microsoft-Store-Fassung: Updates kommen über den Store.")
+            return
         if self._settings.update_check is None:
             QTimer.singleShot(delay_ms, self._ask_consent)
         elif self._settings.update_check:
@@ -208,8 +225,13 @@ class UpdateController(PropertyObject):
     def checkNow(self) -> None:  # noqa: N802
         self.check(True)
 
+    @Slot()
+    def openStore(self) -> None:  # noqa: N802
+        """Seite „Downloads und Updates“ des Microsoft Store öffnen."""
+        QDesktopServices.openUrl(QUrl(STORE_UPDATES_URL))
+
     def check(self, manual: bool = True) -> None:
-        if self._state in ("checking", "downloading", "installing"):
+        if self._kind is InstallKind.MS_STORE or self._state in ("checking", "downloading", "installing"):
             return
         self._manual = manual
         self._set_state("checking", "Suche nach Updates …")

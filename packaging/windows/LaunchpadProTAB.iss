@@ -50,6 +50,13 @@
 #define ProgId "LaunchpadProTAB.Projekt"
 ; Niemals ändern – daran erkennt Windows die Installation (Updates, Deinstallation):
 #define AppIdGuid "623A59DC-8E1B-496A-A80C-66ADADD7D898"
+; Microsoft-Store-Fassung (signiert von Microsoft) für PCs mit intelligenter App-Steuerung.
+; StoreId (Produkt-ID aus Partner Center) setzt tools/build_installer.py aus packaging/msix/store.json.
+#ifdef StoreId
+  #define StoreUrl "ms-windows-store://pdp/?ProductId=" + StoreId
+#else
+  #define StoreUrl AppURL + "#windows-microsoft-store"
+#endif
 
 [Setup]
 AppId={{{#AppIdGuid}}
@@ -209,6 +216,38 @@ begin
   Result := ExpandConstant('{param:LPTABRESTART|0}') = '1';
 end;
 
+{ Intelligente App-Steuerung (Windows 11): blockiert die unsignierte Programmdatei –
+  Launchpad Pro würde nach der Installation nicht starten. }
+function SmartAppControlActive(): Boolean;
+var
+  State: Cardinal;
+begin
+  Result := RegQueryDWordValue(HKLM64, 'SYSTEM\CurrentControlSet\Control\CI\Policy',
+    'VerifiedAndReputablePolicyState', State) and (State = 1);
+end;
+
+{ Store-Fassung anbieten. False = Setup beenden (Store bzw. Projektseite wurde geöffnet). }
+function ContinueDespiteSmartAppControl(): Boolean;
+var
+  ErrorCode: Integer;
+begin
+  Log('Intelligente App-Steuerung ist eingeschaltet.');
+  Result := TaskDialogMsgBox('Intelligente App-Steuerung ist eingeschaltet',
+    'Windows blockiert auf diesem PC Programme ohne digitale Signatur. Diese Fassung von ' +
+    'Launchpad Pro ist nicht signiert und würde nach der Installation nicht starten.' + #13#10#13#10 +
+#ifdef StoreId
+    'Installieren Sie Launchpad Pro deshalb aus dem Microsoft Store – dort ist es von Microsoft ' +
+    'signiert und wird automatisch aktualisiert.',
+    mbError, MB_YESNO, ['Microsoft Store öffnen', 'Trotzdem installieren'], 0) = IDNO;
+#else
+    'Eine von Microsoft signierte Fassung für den Microsoft Store ist in Vorbereitung – Hinweise ' +
+    'dazu stehen auf der Projektseite.',
+    mbError, MB_YESNO, ['Projektseite öffnen', 'Trotzdem installieren'], 0) = IDNO;
+#endif
+  if not Result then
+    ShellExecAsOriginalUser('open', '{#StoreUrl}', '', '', SW_SHOWNORMAL, ewNoWait, ErrorCode);
+end;
+
 { Beim Update aus dem Programm heraus: warten, bis Launchpad Pro beendet ist.
   Muss vor der AppMutex-Prüfung passieren – die folgt direkt nach InitializeSetup. }
 function InitializeSetup(): Boolean;
@@ -218,6 +257,12 @@ var
   ReadyFile: String;
 begin
   Result := True;
+  if (not WizardSilent) and SmartAppControlActive() then
+    if not ContinueDespiteSmartAppControl() then
+    begin
+      Result := False;
+      Exit;
+    end;
   { Dem Programm melden: Setup läuft (mit Administratorrechten) – es darf sich jetzt beenden }
   ReadyFile := ExpandConstant('{param:LPTABREADY|}');
   if ReadyFile <> '' then

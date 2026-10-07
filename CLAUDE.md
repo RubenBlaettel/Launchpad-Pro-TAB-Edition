@@ -25,6 +25,12 @@ Kommentare, Doku: **Deutsch**. Aktuelle Version: siehe `launchpad_pro_tab/__init
   `RubenBlaettel/Launchpad-Pro-TAB-Edition`, Standardzweig `main`, Repository öffentlich).
   PRs nur auf ausdrücklichen Wunsch. v1.1 ist über PR #1 in `main` – für Folgearbeiten den Zweig
   zuerst auf `origin/main` setzen.
+- **Lokaler Arbeitsordner des Nutzers** (Windows 11, `C:\Projekte\Launchpad-Pro-TAB-Edition\
+  Launchpad-Pro-TAB-Edition-1.1.0`) ist seit 07.10.2026 eine **Git-Arbeitskopie von `main`** (vorher
+  ein entpacktes 1.1.0 ohne git → Änderungen mussten von Hand mit GitHub zusammengeführt werden).
+  Auf Auftrag „auf GitHub hochladen“ wird direkt nach `main` gepusht und der Entwicklungszweig
+  gleichgezogen. `gh` ist dort angemeldet. Auf diesem PC ist die **intelligente App-Steuerung an** –
+  siehe Stolperfallen (blockiert auch neu installierte Python-Binärpakete).
 
 ### Entscheidungen aus Rückfragen
 
@@ -35,7 +41,9 @@ Kommentare, Doku: **Deutsch**. Aktuelle Version: siehe `launchpad_pro_tab/__init
 | Tempo-Regler (v1.0) | **Tonhöhe bleibt erhalten** (Time-Stretch), 0,5×–2,0×, Rastpunkt 1,0× – seit v1.2 Phase-Vocoder statt WSOLA (siehe unten) |
 | Update-Quelle (v1.1) | Repo war privat → Nutzer macht das **Repository öffentlich**; Updates direkt aus dessen GitHub-Releases (keine Tokens). |
 | Erstes Release (v1.1) | **v1.1.0 veröffentlicht** (25.09.2026): Nutzer hat PR #1 nach `main` gemergt und das Release in der GitHub-Oberfläche angelegt; `release.yml` hat die Assets angehängt. |
-| Installer von Windows 11 blockiert (intelligente App-Steuerung, Fehler 4551) | **Signatur über die SignPath Foundation** (kostenlos für Open Source); Einrichtung: `docs/SIGNPATH.md`. |
+| Installer von Windows 11 blockiert (intelligente App-Steuerung, Fehler 4551) | ~~Signatur über die SignPath Foundation~~ – **abgelehnt** (07.10.2026, „zu geringe Reichweite“). `docs/SIGNPATH.md` + Signierablauf bleiben für ein späteres Zertifikat. |
+| Signatur-Weg nach der SignPath-Ablehnung (07.10.2026) | **Microsoft Store (MSIX)** – kostenlos, Microsoft signiert, Store verteilt Updates. Verworfen: Azure Artifact Signing (Privatpersonen nur USA/Kanada; über den Verein ≈ 10 $/Monat, Verein ≥ 3 Jahre), Certum-OSS-Zertifikat (≈ 50–70 €/Jahr, Signieren lokal per SimplySign). Selbst signierte Zertifikate erkennt die App-Steuerung grundsätzlich nicht an. Inno-Installer + GitHub-Updater bleiben für PCs ohne App-Steuerung. Konto/Einreichung macht der Nutzer: `docs/MICROSOFT_STORE.md`. |
+| Release 1.2.0 (07.10.2026) | **Erst veröffentlichen, wenn die Store-Fassung steht** („erst mit Signatur“). `__version__` ist schon 1.2.0 (für das Store-Paket); CHANGELOG-Abschnitt heißt bis dahin „[Unveröffentlicht]“. |
 | Lizenz (Voraussetzung SignPath) | **MIT**, Rechteinhaber **TAB Theater** (`LICENSE`). |
 | Update-Suche vs. Datenschutzerklärung (SignPath) | **Beim ersten Start einmal fragen**; ohne Zustimmung keine Verbindung ins Netz. |
 | Registerkarten: Wiedergabe beim Wechsel (v1.2) | **Weiterspielen** wie ein Browser-Tab; Karte zeigt ▶ + Anzahl; „ALLES STOPPEN“ stoppt alle Karten. |
@@ -131,6 +139,18 @@ Kommentare, Doku: **Deutsch**. Aktuelle Version: siehe `launchpad_pro_tab/__init
   Optional Vorabversionen (Beta). Prüfsumme ist Pflicht (GitHub-`digest` oder `SHA256SUMS.txt`).
 - **Einzelinstanz (v1.1):** zweiter Start übergibt Projektpfad per `QLocalServer` an die laufende
   Instanz → nie zwei Audio-Engines; ermöglicht Doppelklick auf `projekt.lptab`.
+- **Microsoft-Store-Fassung (v1.2):** MSIX aus dem unveränderten PyInstaller-Ordner
+  (`tools/build_msix.py`, Vorlage `packaging/msix/AppxManifest.xml`, Identität `packaging/msix/store.json`),
+  **unsigniert** – der Store signiert. Laufzeit-Erkennung über `GetCurrentPackageFamilyName`
+  (`integration.package_family_name()`) → `InstallKind.MS_STORE`: `updater.start()` fragt/sucht nie,
+  `check()` tut nichts, `storeManaged` blendet in *Einstellungen › Updates* Suche/Schalter aus und
+  zeigt „Updates im Microsoft Store anzeigen“ (`ms-windows-store://downloadsandupdates`); keine
+  eigene AppUserModelID im Paket. Manifest: `runFullTrust`, Dateizuordnung `.lptab`, App-Alias
+  `LaunchpadProTAB.exe` (CI startet darüber), `de-DE`, MinVersion 10.0.17763. Bilder in Zielgröße
+  aus `tools/make_icon.render()`, mit makepri zusätzlich scale-200/targetsize/altform-unplated.
+  Vorabversionen → kein Store-Paket. Der **Inno-Installer** prüft `HKLM\SYSTEM\CurrentControlSet\
+  Control\CI\Policy\VerifiedAndReputablePolicyState = 1` (App-Steuerung an) und bietet (nicht bei
+  stillen Updates) Store bzw. Projektseite an; `StoreId` kommt aus `store.json` (`build_installer.py`).
 
 ## 2. Schnellstart für Entwicklung
 
@@ -216,10 +236,12 @@ launchpad_pro_tab/
     net.py            urllib, nur https (http nur localhost), Zertifikate: System, Fallback certifi
     releases.py       fetch_releases (GitHub-API), pick_update, Asset-Digest, SHA256SUMS; LPTAB_UPDATE_URL
     download.py       download(): *.part, Größe + SHA-256 Pflicht, Abbruch per Event
-    install.py        InstallKind (Windows-Installer/portabel, Linux-Paket, Quellcode), Installer-Argumente,
+    install.py        InstallKind (Windows-Installer/portabel, Microsoft Store, Linux-Paket, Quellcode),
+                      is_packaged(), Installer-Argumente,
                       Linux: extract_bundle (tar filter="data"), swap_directories, finish_linux_update, pkexec
   system/volume.py    SystemVolume-Protokoll + Windows(pycaw)/Pulse/WirePlumber/ALSA/macOS/Dummy
-  system/integration.py  Windows: Named Mutex (für AppMutex des Installers), AppUserModelID,
+  system/integration.py  Windows: Named Mutex (für AppMutex des Installers), AppUserModelID (nicht im MSIX),
+                      package_family_name() (MSIX-Erkennung),
                       disable_press_and_hold (Fenster-Eigenschaft MicrosoftTabletPenServiceProperty)
   bridge/             Qt-Brücke
     backend.py        Backend (QML: `backend`) – Registerkarten (tabs/activeTab/activateTab/newTab/
@@ -251,20 +273,26 @@ packaging/
                            LICENSE.txt + THIRD_PARTY_NOTICES.md neben die EXE
   windows/LaunchpadProTAB.iss  Inno Setup 7 (+ wizard-large.png/wizard-small.png aus tools/make_installer_images.py);
                            Signatur per /DSignToolName (lokal) oder /DSignedUninstallerDir (extern, 2 Durchläufe)
-  signpath/artifact-configuration.xml  SignPath-Konfiguration „windows“ (signiert *.exe/*.dll im ZIP)
+  msix/AppxManifest.xml  Manifest-Vorlage des Store-Pakets ($-Platzhalter, KEIN „--“ in Kommentaren)
+  msix/store.json     Paket-Identität aus Partner Center (leer = nur Testpaket) + store_id
+  signpath/artifact-configuration.xml  SignPath-Konfiguration „windows“ (SignPath abgelehnt – ruht)
   linux/install.sh, uninstall.sh  (install/--update/--uninstall, .install-info listet angelegte Dateien)
 tools/                make_screenshots.py, make_installer_screenshots.py, demo_assets.py, make_icons.py,
                       make_icon.py, make_installer_images.py, build_installer.py (--sign-tool,
                       --signed-uninstaller-dir; Code 3 = „erst signieren“), signing.py (sammeln/
                       einsetzen/pruefen), test_sign.ps1 (CI-Test-Zertifikat), build_linux_package.py,
+                      build_msix.py (Store-Paket; --test-identity, --no-pack ohne SDK), test_msix.ps1
+                      (CI: Testsignatur, Add-AppxPackage, Smoke-Test über App-Alias, Deinstallation),
                       test_windows_installer.ps1, test_linux_package.sh, release_notes.py
 tests/                test_models, test_project, test_audio, test_settings_volume, test_ui (Touch/Maus,
                       Theme, Update-Dialog, Zustimmungsfrage, Registerkarten, Projektauswahl,
                       Kacheln ziehen, Durchklick-Schutz, Fader-Farben), test_update (lokaler
                       Fake-GitHub-Server), test_purge, test_single_instance, test_signing
-                      (künstliche PE-Dateien)
-docs/                 images/ (README-Bilder), SIGNPATH.md (Antrag + Einrichtung der Code-Signatur)
-.github/workflows/    build.yml (wiederverwendbar, Input `sign`), ci.yml (jeder Push), release.yml (Tag v*)
+                      (künstliche PE-Dateien), test_msix (Version, Identität, Manifest, Paketordner)
+docs/                 images/ (README-Bilder), MICROSOFT_STORE.md (Konto, Einreichung, Updates im Store),
+                      SIGNPATH.md (abgelehnt, für später aufbewahrt)
+.github/workflows/    build.yml (wiederverwendbar, Input `sign`; Artefakt LaunchpadProTAB-Microsoft-Store),
+                      ci.yml (jeder Push), release.yml (Tag v*)
 ```
 
 ### Datenfluss Kachel antippen
@@ -292,6 +320,8 @@ Ergebnisse für Hintergrund-Karten werden normal übernommen.
 
 ### Datenfluss Update
 
+**Store-Fassung (`InstallKind.MS_STORE`): `updater.start()` kehrt sofort zurück – kein Dialog, keine
+Verbindung; Updates kommen über den Store.** Sonst:
 `Backend.start(check_updates=True)` (nur aus `main()`) → `updater.start()` → ohne Antwort auf die
 Zustimmungsfrage: 4 s später `consentPending` → QML-Timer öffnet `UpdateConsentDialog` →
 `answerConsent(bool)` (bei Ja sofort prüfen) · mit Zustimmung: 4 s später Thread:
@@ -355,8 +385,15 @@ Installer-E2E-Test (prüft Signatur von EXE und `unins000.exe`) → Release.
 - Update-/Installer-Parameter (`/LPTABWAITPID`, `/LPTABREADY`, `/LPTABRESTART`, `/LPTABPURGE`, `--purge-user-data`,
   `--finish-update`, `--wait-pid`) sind Schnittstellen – Änderungen immer an beiden Seiten + Tests.
 - **Datenschutz:** Das Programm baut **ohne ausdrückliche Zustimmung keine Netzverbindung** auf
-  (Update-Suche erst nach „Ja“ bzw. per Knopf). Die Datenschutzerklärung im README ist Voraussetzung
-  der SignPath-Signatur – neue Netzfunktionen immer mit Zustimmung + README-Abschnitt „Datenschutz“.
+  (Update-Suche erst nach „Ja“ bzw. per Knopf; Store-Fassung nie). Die Datenschutzerklärung im
+  README (`#datenschutz`) ist die Datenschutzrichtlinie der Store-Seite – neue Netzfunktionen immer
+  mit Zustimmung + README-Abschnitt „Datenschutz“.
+- **Store-Paket:** Identität (`identity_name`, `publisher`, `publisher_display_name`) und
+  `display_name` in `packaging/msix/store.json` müssen **exakt** Partner Center entsprechen.
+  MSIX-Version = `__version__` + `.0` (Store verlangt 0 an vierter Stelle, muss je Übermittlung
+  steigen). Das Paket immer aus dem **unsignierten** PyInstaller-Ordner bauen (in `build.yml` vor den
+  Test-Signatur-Schritten) und nie selbst signiert hochladen. Die Store-Fassung darf keine eigene
+  Update-Installation anstoßen (Store-Richtlinie + schreibgeschützter `WindowsApps`-Ordner).
 - **Signatur:** Nur Dateien signieren, die GitHub Actions aus diesem Repository baut; Test-Zertifikat
   (`tools/test_sign.ps1`) nie für Releases. Werden Programmdateien nach dem Signieren verändert
   (z. B. Ressourcen), ist die Signatur kaputt – Signieren ist immer der letzte Schritt vor dem Paketieren.
@@ -486,6 +523,23 @@ Installer-E2E-Test (prüft Signatur von EXE und `unins000.exe`) → Release.
 - signpath.org und jrsoftware.org sind aus dem Container gesperrt (Egress) → Inno-Hilfe lokal aus
   `ISetup.chm` lesen (`apt-get install libchm-bin`, `extract_chmLib`), Inno-Quelltext unter
   github.com/jrsoftware/issrc.
+- **Intelligente App-Steuerung auf dem Nutzer-PC** (Ereignisanzeige: *Microsoft-Windows-
+  CodeIntegrity/Operational*, Ereignis 3077 „did not meet the Enterprise signing level
+  requirements“; Status: Registry `…\Control\CI\Policy\VerifiedAndReputablePolicyState`, 1 = an)
+  blockiert nicht nur Launchpad Pro, sondern auch **frisch per pip installierte Binärpakete**:
+  `pip install av==19.0.1` in die `.venv` → „DLL load failed … Eine Anwendungssteuerungsrichtlinie
+  hat diese Datei blockiert“. In der Nutzer-`.venv` keine Binärpakete aktualisieren (ggf. sofort
+  die alte Version zurückinstallieren, z. B. `av==18.1.0`); neue Bibliotheksversionen in der CI
+  prüfen. Ein testweise signiertes MSIX lässt sich dort ebenfalls nicht installieren → CI.
+- **PyAV 19** hat `av.open(..., metadata_errors=…)` entfernt (Metadaten jetzt immer UTF-8 mit
+  `surrogateescape`) → TypeError, MP3/M4A ließen sich nicht mehr laden. CI installiert immer die
+  neueste Version, lokal lief noch 18.1 → erst in der CI aufgefallen. Abhilfe `decoder._av_open()`
+  (mit Parameter versuchen, bei TypeError ohne); Test `test_decode_with_pyav_19_open_signature`.
+- XML-Kommentare dürfen kein `--` enthalten (z. B. `--fullscreen` im Manifest-Kommentar → makeappx/
+  ElementTree „not well-formed“). `string.Template` in `build_msix.py`: kein `$` mit geschweiften
+  Klammern in Kommentaren der Vorlage.
+- Python-Skripte per Bash-Heredoc an `python -` mit `\n` in Ersetzungstexten: Escape-Sequenzen
+  verwirren sich leicht → solche Änderungen mit dem Edit-Werkzeug machen.
 
 ## 6. Teststrategie
 
@@ -505,6 +559,15 @@ Installer-E2E-Test (prüft Signatur von EXE und `unins000.exe`) → Release.
 - `tests/test_purge.py`: Löschen nur eigener Daten (fremde Dateien, geschützte Orte bleiben), CLI.
 - `tests/test_signing.py`: Signatur-Erkennung (PE32/PE32+), Sammeln/Einsetzen/Prüfen mit künstlichen
   PE-Dateien, Konsistenz SignPath-Konfiguration ↔ Workflow.
+- `tests/test_msix.py`: MSIX-Version (Vorabversionen → kein Paket), Identität aus `store.json`
+  (Pflichtfelder, Test-Identität nur mit Schalter), Manifest (Identität, runFullTrust, `.lptab`,
+  App-Alias, alle Bilder vorhanden, XML-Maskierung), Paketordner ohne SDK, Bildvarianten, Store-ID
+  für den Installer, Reihenfolge im Workflow (Store-Paket vor Test-Signatur), ASCII-Skript.
+  `test_update.py`/`test_ui.py`: Store-Fassung fragt/sucht nie, Einstellungen zeigen den Store.
+- CI (`build.yml`, Windows): Store-Paket bauen → `tools/test_msix.ps1` (Kopie mit Test-Zertifikat
+  signieren, `Add-AppxPackage`, Alias + `resources.pri` prüfen, `--smoke-test` im Paket mit
+  `LPTAB_SMOKE_REPORT` → `install_kind == microsoft-store`, Deinstallation) → Artefakt
+  **LaunchpadProTAB-Microsoft-Store** (90 Tage).
 - CI (`build.yml`): Tests Linux+Windows; Windows: EXE + Smoke-Test, kompletter Signierablauf mit
   Test-Zertifikat (2 Inno-Durchläufe, Smoke-Test der signierten EXE), Installer bauen und mit
   `tools/test_windows_installer.ps1` **echt installieren, updaten (bei laufendem Programm) und
@@ -534,9 +597,11 @@ Installer-E2E-Test (prüft Signatur von EXE und `unins000.exe`) → Release.
    setzt dann der Nutzer.
 4. Assets: `LaunchpadProTAB-Setup-X.Y.Z.exe`, `LaunchpadProTAB-X.Y.Z-linux-x86_64.tar.gz`, `SHA256SUMS.txt`.
 5. Repository muss **öffentlich** sein, sonst liefert die GitHub-API 404 („Keine veröffentlichten Versionen“).
-6. Signatur: Ist `SIGNPATH_ORGANIZATION_ID` (Repository-Variable) gesetzt, schickt der Release-Lauf
-   zwei Anfragen an SignPath, die der Nutzer per E-Mail/SignPath freigeben muss (Wartezeit je 2 h);
-   sonst unsigniert. Einrichtung und Variablen: `docs/SIGNPATH.md`.
+6. Signatur: SignPath wurde abgelehnt → Releases sind unsigniert (die Variable
+   `SIGNPATH_ORGANIZATION_ID` ist nicht gesetzt). Signiert wird über den **Microsoft Store**:
+   Artefakt *LaunchpadProTAB-Microsoft-Store* des Release-Laufs in Partner Center als neue
+   Übermittlung hochladen (`docs/MICROSOFT_STORE.md`). Voraussetzung: echte Identität in
+   `packaging/msix/store.json` (sonst baut die CI nur ein Testpaket mit Warnung).
 
 ## 8. Stand der Prüfungen
 
@@ -577,6 +642,11 @@ Installer-E2E-Test (prüft Signatur von EXE und `unins000.exe`) → Release.
   schlagen mit dem alten WSOLA fehl (7 von 13). Gemessen mit synthetischen Signalen, Windows-Sprachausgabe
   (SAPI „Hedda“) und den Testdateien des Nutzers (Türklingel: Rauigkeit wie im Original statt +6 … +10 dB).
   Hörprobe durch den Nutzer steht noch aus.
+- Microsoft-Store-Fassung (07.10.2026, lokal Windows 11): 135 Tests grün, `--smoke-test` inkl.
+  `LPTAB_SMOKE_REPORT` grün, Paketordner + alle 30 Bildvarianten lokal erzeugt und angesehen,
+  `test_msix.ps1` mit dem Parser von Windows PowerShell 5.1 geprüft. Paketbau mit makeappx/makepri
+  und Installation des Pakets laufen nur in der CI (lokal kein Windows SDK, App-Steuerung an).
+  Store-Konto, Namensreservierung und erste Einreichung macht der Nutzer.
 - Nicht automatisch prüfbar (auf echter Hardware testen!): tatsächliche Ausgabelatenz mit WASAPI,
   Windows-Systemlautstärke per pycaw auf einem Rechner mit Audiogerät, Touch-Bedienung auf einem
   echten Touchscreen, native Datei-Dialoge, UAC-Abfrage beim Update (CI-Runner hat keine UAC),
@@ -591,3 +661,5 @@ Installer-E2E-Test (prüft Signatur von EXE und `unins000.exe`) → Release.
 - Lock-Datei gegen gleichzeitiges Öffnen desselben Projekts auf zwei Rechnern.
 - Streaming-Dekodierung für sehr lange Dateien (> 30 min), aktuell wird komplett dekodiert.
 - Delta-Updates statt Komplettpaket.
+- Store-Übermittlung automatisieren (Microsoft Store Developer CLI `msstore` bzw. Submission-API in
+  `release.yml`; braucht eine Entra-ID-App mit Zugriff auf Partner Center).

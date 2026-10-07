@@ -10,6 +10,9 @@ Windows (per Installer installiert)
 Windows (portable, ohne Installer)
     Der Installer wird sichtbar gestartet – danach ist das Programm regulär installiert.
 
+Windows (Microsoft Store, MSIX-Paket)
+    Updates verteilt der Store – das Programm sucht und installiert selbst nichts.
+
 Linux (Programmpaket ``*.tar.gz``)
     Das Archiv wird neben den Programmordner entpackt. Ein Hilfsprozess der *neuen*
     Version wartet, bis die alte beendet ist, tauscht die Ordner (alt -> ``.old-…``) und
@@ -44,6 +47,7 @@ OLD_PREFIX = ".alt-"                     # Überbleibsel eines Updates (beim Sta
 class InstallKind(str, Enum):
     WINDOWS_INSTALLER = "windows-installer"
     WINDOWS_PORTABLE = "windows-portable"
+    MS_STORE = "microsoft-store"
     LINUX_BUNDLE = "linux-bundle"
     SOURCE = "source"
     UNSUPPORTED = "unsupported"
@@ -67,14 +71,23 @@ def app_dir() -> Path:
     return Path(__file__).resolve().parents[2]
 
 
+def is_packaged() -> bool:
+    """Läuft das Programm als MSIX-Paket (Microsoft Store)?"""
+    from ..system.integration import package_family_name
+
+    return package_family_name() is not None
+
+
 def detect_install_kind(*, frozen: bool | None = None, platform_name: str | None = None,
-                        directory: Path | None = None) -> InstallKind:
+                        directory: Path | None = None, packaged: bool | None = None) -> InstallKind:
     frozen = is_frozen() if frozen is None else frozen
     platform_name = platform_name or sys.platform
     directory = directory or app_dir()
     if not frozen:
         return InstallKind.SOURCE
     if platform_name == "win32":
+        if is_packaged() if packaged is None else packaged:
+            return InstallKind.MS_STORE
         has_uninstaller = any(directory.glob("unins*.exe"))
         return InstallKind.WINDOWS_INSTALLER if has_uninstaller else InstallKind.WINDOWS_PORTABLE
     if platform_name.startswith("linux") and platform.machine().lower() in ("x86_64", "amd64"):
@@ -96,6 +109,8 @@ def install_hint(kind: InstallKind) -> str:
                                        "Projekt, beendet sich, der Installer aktualisiert das Programm und startet es neu.",
         InstallKind.WINDOWS_PORTABLE: "Diese Programmversion wurde ohne Installer entpackt. Das Update startet den "
                                       "Installer – danach ist Launchpad Pro regulär installiert (Startmenü, Updates).",
+        InstallKind.MS_STORE: "Diese Fassung stammt aus dem Microsoft Store – Windows hält sie über den Store "
+                              "automatisch aktuell.",
         InstallKind.LINUX_BUNDLE: "Das Update wird heruntergeladen und geprüft. Danach wird der Programmordner "
                                   "ausgetauscht und Launchpad Pro neu gestartet.",
         InstallKind.SOURCE: "Launchpad Pro läuft aus dem Quellcode. Bitte den neuen Stand von GitHub holen "

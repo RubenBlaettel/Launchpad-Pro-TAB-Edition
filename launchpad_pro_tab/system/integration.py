@@ -1,15 +1,19 @@
-"""Windows-Integration: Instanz-Mutex (für den Installer), Taskleisten-Kennung und
-„Gedrückt halten“ für Touch/Stift.
+"""Windows-Integration: Instanz-Mutex (für den Installer), Taskleisten-Kennung,
+„Gedrückt halten“ für Touch/Stift und Erkennung des Microsoft-Store-Pakets (MSIX).
 
 Unter anderen Systemen sind die Funktionen wirkungslos.
 """
 
 from __future__ import annotations
 
+import functools
 import logging
 import sys
 
 log = logging.getLogger(__name__)
+
+APPMODEL_ERROR_NO_PACKAGE = 15700
+ERROR_INSUFFICIENT_BUFFER = 122
 
 # Muss mit AppMutex im Installer-Skript (packaging/windows/LaunchpadProTAB.iss) übereinstimmen
 MUTEX_NAME = "LaunchpadProTAB-Instanz"
@@ -35,9 +39,37 @@ def create_instance_mutex() -> None:
             log.debug("Mutex %s nicht angelegt (Fehler %s)", name, kernel32.GetLastError())
 
 
-def set_app_user_model_id() -> None:
-    """Gleiche Taskleisten-Gruppe/Symbol wie die Verknüpfungen des Installers."""
+@functools.lru_cache(maxsize=1)
+def package_family_name() -> str | None:
+    """Paketfamilie, wenn das Programm als MSIX-Paket läuft (Microsoft Store), sonst ``None``."""
     if sys.platform != "win32":
+        return None
+    try:
+        import ctypes
+        from ctypes import wintypes
+
+        func = ctypes.WinDLL("kernel32").GetCurrentPackageFamilyName
+    except (OSError, AttributeError):       # vor Windows 8 gibt es keine Pakete
+        return None
+    func.argtypes = [ctypes.POINTER(wintypes.UINT), wintypes.LPWSTR]
+    func.restype = wintypes.LONG
+    length = wintypes.UINT(0)
+    rc = func(ctypes.byref(length), None)
+    if rc != ERROR_INSUFFICIENT_BUFFER:     # APPMODEL_ERROR_NO_PACKAGE = kein Paket
+        return None
+    buf = ctypes.create_unicode_buffer(length.value)
+    if func(ctypes.byref(length), buf) != 0:
+        return None
+    return buf.value or None
+
+
+def set_app_user_model_id() -> None:
+    """Gleiche Taskleisten-Gruppe/Symbol wie die Verknüpfungen des Installers.
+
+    Im MSIX-Paket vergibt Windows die Kennung selbst – eine eigene würde das Anheften an
+    die Taskleiste und die Sprungliste des Pakets stören.
+    """
+    if sys.platform != "win32" or package_family_name():
         return
     try:
         import ctypes

@@ -78,11 +78,25 @@ def _decode_sndfile(path: Path) -> tuple[np.ndarray, int]:
     return data, int(sr)
 
 
+def _av_open(path: Path):
+    """Datei mit PyAV öffnen, ohne an kaputten Metadaten (z. B. ID3-Tags in Latin-1) zu scheitern.
+
+    Bis PyAV 18 braucht das ``metadata_errors="ignore"``; ab PyAV 19 gibt es den Parameter nicht
+    mehr – Metadaten werden dort immer fehlertolerant gelesen (UTF-8 mit ``surrogateescape``).
+    """
+    import av
+
+    try:
+        return av.open(str(path), metadata_errors="ignore")
+    except TypeError:
+        return av.open(str(path))
+
+
 def _decode_ffmpeg(path: Path) -> tuple[np.ndarray, int]:
     import av
 
     try:
-        container = av.open(str(path), metadata_errors="ignore")
+        container = _av_open(path)
     except Exception as exc:  # av.error.* erben von Exception
         raise DecodeError(str(exc)) from exc
     with container:
@@ -147,9 +161,7 @@ def probe(path: Path | str) -> AudioInfo:
         except Exception:
             pass
     try:
-        import av
-
-        with av.open(str(path), metadata_errors="ignore") as container:
+        with _av_open(path) as container:
             stream = next(s for s in container.streams if s.type == "audio")
             if stream.duration is not None and stream.time_base is not None:
                 duration = float(stream.duration * stream.time_base)

@@ -68,6 +68,32 @@ def test_decode_ffmpeg_formats(tmp_path, name, codec, fmt):
     assert abs(dominant_frequency(data, SR) - 523.25) < 6
 
 
+def test_decode_with_pyav_19_open_signature(tmp_path, monkeypatch):
+    """PyAV 19 kennt ``metadata_errors`` nicht mehr – Dekodieren und Dauer müssen trotzdem gehen."""
+    import av
+
+    sr = 48000
+    path = tmp_path / "t.m4a"
+    try:
+        _encode_av(path, sine(440.0, 1.0, sr), sr, "aac", "ipod")
+    except Exception as exc:  # noqa: BLE001
+        pytest.skip(f"Encoder aac nicht verfügbar: {exc}")
+    real_open = av.open
+    calls = []
+
+    def open_v19(file, *args, **kwargs):
+        calls.append(sorted(kwargs))
+        if "metadata_errors" in kwargs or "metadata_encoding" in kwargs:
+            raise TypeError("open() got an unexpected keyword argument 'metadata_errors'")
+        return real_open(file, *args, **kwargs)
+
+    monkeypatch.setattr(av, "open", open_v19)
+    data, out_sr = decode(path, SR)
+    assert out_sr == SR and abs(dominant_frequency(data, SR) - 440) < 6
+    assert abs(probe(path).duration - 1.0) < 0.1
+    assert [] in calls                                   # Aufruf ohne den alten Parameter
+
+
 def test_decode_mono_and_resample(tmp_path):
     path = tmp_path / "mono.wav"
     sf.write(path, sine(300, 0.5, 22050, channels=1), 22050)

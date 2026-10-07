@@ -21,6 +21,7 @@ Master-Fader für die Windows-Systemlautstärke, ein **dunkles und ein helles De
 
 1. [Funktionen im Überblick](#funktionen-im-überblick)
 2. [Installation](#installation)
+   - [Windows: Microsoft Store](#windows-microsoft-store)
    - [Windows (Installer)](#windows-installer)
    - [Linux (Programmpaket)](#linux-programmpaket)
    - [Deinstallation](#deinstallation)
@@ -67,6 +68,30 @@ Master-Fader für die Windows-Systemlautstärke, ein **dunkles und ein helles De
 
 ## Installation
 
+### Windows: Microsoft Store
+
+Auf vielen Windows-11-PCs ist die **intelligente App-Steuerung** eingeschaltet. Sie startet nur
+Programme, die mit einem vertrauenswürdigen Zertifikat digital signiert sind – den unsignierten
+Installer und das damit installierte Programm blockiert sie (Fehler 4551, „Ein Teil dieser App wurde
+blockiert“). Für diese PCs gibt es Launchpad Pro im **Microsoft Store**: Dort signiert Microsoft
+das Programm selbst.
+
+> **Stand:** Die Store-Fassung ist in Vorbereitung (Einreichung siehe
+> [`docs/MICROSOFT_STORE.md`](docs/MICROSOFT_STORE.md)). Sobald sie freigegeben ist, steht hier der
+> Link zur Store-Seite.
+
+- **Installieren:** Store-Seite öffnen → **Installieren** (keine Administratorrechte, kein
+  Microsoft-Konto nötig) – oder in der Eingabeaufforderung `winget install --source msstore "Launchpad Pro TAB Edition"`.
+- **Updates** installiert Windows automatisch über den Store; Launchpad Pro sucht in dieser Fassung
+  nicht selbst nach Updates (*Einstellungen › Updates* zeigt das an).
+- Funktionen, Projekte und Bedienung sind identisch. Das Programm erscheint im Startmenü (eine
+  Desktop-Verknüpfung legt der Store nicht an), `.lptab`-Projektdateien öffnen sich per Doppelklick.
+- Projekte liegen wie bei der Installer-Fassung im Ordner *Dokumente › Launchpad Pro TAB* und
+  bleiben beim Deinstallieren erhalten.
+
+Ob die App-Steuerung eingeschaltet ist, zeigt *Windows-Sicherheit › App- & Browsersteuerung ›
+Einstellungen für intelligente App-Steuerung*. Ist sie aus, funktioniert auch der Installer unten.
+
 ### Windows (Installer)
 
 1. Auf der GitHub-Seite des Projekts unter **Releases** die neueste Version öffnen und unter
@@ -89,9 +114,10 @@ Assistent etwas moderner, Inhalt und Ablauf sind identisch.)
 
 > **Hinweise:** Für die Installation nach `C:\Program Files` fragt Windows nach Administratorrechten.
 > Solange eine Version noch unbekannt ist, kann Windows SmartScreen beim ersten Start warnen:
-> *Weitere Informationen → Trotzdem ausführen*. **Unsignierte** Versionen (bis einschließlich 1.1.0)
-> blockiert die *intelligente App-Steuerung* von Windows 11 vollständig (Fehler 4551) – siehe
-> [Fehlerbehebung](#fehlerbehebung) und [Code-Signatur](#code-signatur). Voraussetzung: Windows 10
+> *Weitere Informationen → Trotzdem ausführen*. Der Installer ist **nicht signiert** – ist die
+> *intelligente App-Steuerung* von Windows 11 eingeschaltet, startet das Programm danach nicht.
+> Der Installer erkennt das, weist darauf hin und bietet die
+> [Microsoft-Store-Fassung](#windows-microsoft-store) an. Voraussetzung: Windows 10
 > (Version 1809) oder Windows 11, 64 Bit.
 
 Für Administratoren (Verteilung auf mehrere Rechner) funktioniert auch eine stille Installation:
@@ -216,6 +242,12 @@ Prüfung ein- oder ausschalten (z. B. auf einem Bühnenrechner ohne Internet) od
 
 > Die Updates kommen aus den **Releases** dieses GitHub-Repositorys. Damit installierte Programme sie
 > ohne Anmeldung abrufen können, muss das Repository **öffentlich** sein.
+
+**Microsoft-Store-Fassung:** Hier übernimmt der Store die Updates – automatisch im Hintergrund,
+signiert von Microsoft. Launchpad Pro fragt dann weder nach der Update-Suche noch baut es selbst eine
+Verbindung ins Internet auf; *Einstellungen › Updates* führt direkt zu *Downloads und Updates* im Store.
+
+![Einstellungen › Updates in der Store-Fassung](docs/images/23_einstellungen_store.png)
 
 ---
 
@@ -531,7 +563,7 @@ heruntergemischt, abweichende Sampleraten in hoher Qualität umgerechnet.
 | Kachel zeigt „Datei fehlt“ | Die Audiodatei wurde aus dem Projektordner entfernt. Kachel neu belegen. |
 | Datei lässt sich nicht laden | Format beschädigt oder ohne Tonspur – Meldung unten lesen; ggf. Datei in WAV/MP3 umwandeln. |
 | Windows warnt beim Installer („Windows hat den PC geschützt“) | SmartScreen kennt die Datei noch nicht: *Weitere Informationen → Trotzdem ausführen*. |
-| Installer bricht ab: „Die Datei konnte nicht im temporären Ordner ausgeführt werden … Fehler 4551: Eine Anwendungssteuerungsrichtlinie hat diese Datei blockiert“, dazu „Ein Teil dieser App wurde blockiert“ | Das ist die **intelligente App-Steuerung** von Windows 11: Sie lässt nur digital signierte oder bei Microsoft bekannte Programme zu – eine Ausnahme für einzelne Programme gibt es nicht. Signierte Versionen laufen ohne Umstellung (siehe [Code-Signatur](#code-signatur)). Für eine unsignierte Version: *Windows-Sicherheit › App- & Browsersteuerung › Einstellungen für intelligente App-Steuerung › Aus* (je nach Windows-Version lässt sie sich danach nur durch Zurücksetzen von Windows wieder einschalten). |
+| Installer bricht ab („Die Datei konnte nicht im temporären Ordner ausgeführt werden … Fehler 4551: Eine Anwendungssteuerungsrichtlinie hat diese Datei blockiert“) **oder** das installierte Programm startet nicht („Ein Teil dieser App wurde blockiert“) | Das ist die **intelligente App-Steuerung** von Windows 11: Sie lässt nur Programme zu, die mit einem vertrauenswürdigen Zertifikat signiert sind – eine Ausnahme für einzelne Programme gibt es nicht. Lösung: die [Microsoft-Store-Fassung](#windows-microsoft-store) installieren (von Microsoft signiert). Notlösung für den Installer: *Windows-Sicherheit › App- & Browsersteuerung › Einstellungen für intelligente App-Steuerung › Aus* (je nach Windows-Version lässt sie sich danach nur durch Zurücksetzen von Windows wieder einschalten). |
 | „Keine veröffentlichten Versionen gefunden“ bei der Update-Suche | Es gibt noch kein Release, oder das GitHub-Repository ist privat. |
 | „GitHub-Abfragelimit erreicht“ | Viele Rechner hinter einem Internetanschluss haben kurz nacheinander gesucht – nach einer Stunde erneut versuchen. |
 | Update schlägt fehl | Meldung im Update-Dialog lesen; das installierte Programm bleibt unverändert. Protokoll: `%LOCALAPPDATA%\LaunchpadProTAB\updates\installation.log`. Notfalls den Installer von der Release-Seite manuell starten. |
@@ -618,7 +650,7 @@ Bruchteil der verfügbaren Zeit – Reserven gegen Aussetzer sind also reichlich
 | `audio.output.OutputBackend` | `SoundDeviceBackend` (PortAudio/WASAPI), `NullBackend` (ohne Soundkarte) |
 | `audio.decoder.decode()` | libsndfile → FFmpeg (automatischer Fallback) |
 | `system.volume.SystemVolume` | `WindowsVolume` (Core Audio), `PulseVolume`, `WirePlumberVolume`, `AlsaVolume`, `MacVolume`, `DummyVolume` |
-| `update.install.InstallKind` | Windows-Installer, Windows portabel, Linux-Paket, Quellcode |
+| `update.install.InstallKind` | Windows-Installer, Windows portabel, Microsoft Store (MSIX – Updates über den Store), Linux-Paket, Quellcode |
 | `bridge.Backend` | einzige Schnittstelle der Oberfläche zur Logik (+ `editor`, `master`, `updater`) |
 
 **Projektstruktur**
@@ -636,13 +668,14 @@ launchpad_pro_tab/
 packaging/
 ├── launchpad_pro_tab.spec     PyInstaller (Windows-EXE und Linux-Programmordner)
 ├── windows/LaunchpadProTAB.iss  Inno-Setup-Skript + Assistenten-Bilder
-├── signpath/artifact-configuration.xml  Signatur-Konfiguration für SignPath
+├── msix/AppxManifest.xml, store.json  Microsoft-Store-Paket (Manifest-Vorlage, Identität aus Partner Center)
+├── signpath/artifact-configuration.xml  Signatur-Konfiguration für SignPath (abgelehnt, siehe unten)
 └── linux/install.sh, uninstall.sh
-tests/                  pytest (Kernlogik, Audio, Updates, Signatur, Deinstallation, UI inkl. Maus/Touch)
-tools/                  Screenshots, Installer/Linux-Paket bauen, signieren (signing.py) und testen,
-                        Icons, Versionshinweise
-docs/                   Bilder der Anleitung, SIGNPATH.md (Code-Signatur einrichten)
-.github/workflows/      build.yml (Tests + Pakete + Signatur + Installer-Test), ci.yml, release.yml
+tests/                  pytest (Kernlogik, Audio, Updates, Store-Paket, Signatur, Deinstallation, UI inkl. Maus/Touch)
+tools/                  Screenshots, Installer/Store-Paket/Linux-Paket bauen (build_msix.py …),
+                        signieren (signing.py) und testen, Icons, Versionshinweise
+docs/                   Bilder der Anleitung, MICROSOFT_STORE.md (Store-Einreichung), SIGNPATH.md
+.github/workflows/      build.yml (Tests + Pakete + Store-Paket-Test + Installer-Test), ci.yml, release.yml
 ```
 
 **Entwickeln und prüfen**
@@ -654,6 +687,7 @@ python -m launchpad_pro_tab --smoke-test              # Oberfläche + Dekodierun
 xvfb-run -a -s "-screen 0 1920x1080x24" python tools/make_screenshots.py   # README-Bilder (Linux)
 pyinstaller packaging/launchpad_pro_tab.spec --noconfirm                   # Programmordner
 python tools/build_installer.py                       # Windows: Installer (braucht Inno Setup 7)
+python tools/build_msix.py --test-identity            # Windows: Store-Paket (braucht das Windows SDK)
 python tools/build_linux_package.py                   # Linux: .tar.gz mit install.sh
 sh tools/test_linux_package.sh dist/LaunchpadProTAB-*-linux-x86_64.tar.gz  # Paket-Test (Linux)
 ```
@@ -680,13 +714,16 @@ Weitere Hinweise für die Weiterentwicklung (auch mit Claude Code) stehen in [`C
    Zweig mit dem Code auswählen, Titel z. B. „Launchpad Pro TAB Edition 1.2.0“ → *Publish release*.
    Der Workflow ergänzt anschließend Installer, Linux-Paket, Prüfsummen und Versionshinweise.
    (Sobald der Workflow im Standardzweig liegt, geht es auch über *Actions › Release › Run workflow*.)
-4. Der Workflow **Release** baut Windows-Installer und Linux-Paket, signiert die Windows-Dateien
-   über SignPath (sobald eingerichtet, siehe [`docs/SIGNPATH.md`](docs/SIGNPATH.md) – dann kommen zwei
-   E-Mails von SignPath, die jeweils freigegeben werden müssen), testet beide Pakete, erstellt die
-   Prüfsummen (`SHA256SUMS.txt`) und veröffentlicht das GitHub-Release. Versionen mit Buchstaben
+4. Der Workflow **Release** baut Windows-Installer, Microsoft-Store-Paket und Linux-Paket, testet
+   alle drei (Installation, Start, Update, Deinstallation), erstellt die Prüfsummen
+   (`SHA256SUMS.txt`) und veröffentlicht das GitHub-Release. Versionen mit Buchstaben
    (z. B. `1.3.0-beta.1`) werden als **Vorabversion** veröffentlicht und nur Programmen angeboten,
-   bei denen *Vorabversionen (Beta)* eingeschaltet ist.
-5. Alle installierten Programme zeigen das Update beim nächsten Start an.
+   bei denen *Vorabversionen (Beta)* eingeschaltet ist (für Vorabversionen gibt es kein Store-Paket).
+5. Alle per Installer installierten Programme zeigen das Update beim nächsten Start an.
+6. **Microsoft Store:** Das Store-Paket (`LaunchpadProTAB-<Version>.msix`, im Release-Lauf unter
+   *Artifacts › LaunchpadProTAB-Microsoft-Store*) in Partner Center als neue Übermittlung hochladen –
+   nach der Zertifizierung verteilt der Store das Update automatisch. Schritt für Schritt:
+   [`docs/MICROSOFT_STORE.md`](docs/MICROSOFT_STORE.md).
 
 Der Tag muss zur Versionsnummer im Code passen – sonst bricht der Workflow ab (sonst würde das
 Programm nach dem Update immer wieder dieselbe Version anbieten).
@@ -704,22 +741,15 @@ Klänge und Bilder in den Screenshots sind synthetisch erzeugt (`tools/demo_asse
 
 ### Code-Signatur
 
-Windows-Installer und Programmdateien werden über das kostenlose Open-Source-Programm der
-SignPath Foundation digital signiert (Code signing policy):
-
-*Free code signing provided by [SignPath.io](https://about.signpath.io/), certificate by
-[SignPath Foundation](https://signpath.org/).*
-
-- Signiert werden ausschließlich Dateien, die GitHub Actions aus diesem Repository baut
-  (Workflow `release.yml`); jede Signatur für ein Release wird von Hand freigegeben.
-- Signiert werden der Installer, der Deinstaller, `LaunchpadProTAB.exe` und die mitgelieferten
-  Open-Source-Bibliotheken ohne Herstellersignatur (Einrichtung: [`docs/SIGNPATH.md`](docs/SIGNPATH.md)).
-- Committer und Reviewer: [RubenBlaettel](https://github.com/RubenBlaettel) ·
-  Freigabe (Approver): [RubenBlaettel](https://github.com/RubenBlaettel)
-
-> **Stand:** Die Aufnahme bei der SignPath Foundation läuft. Bis zur ersten signierten Version sind
-> Installer und Programm unsigniert – Windows 11 mit **intelligenter App-Steuerung** blockiert sie
-> dann (siehe [Fehlerbehebung](#fehlerbehebung)).
+- **Microsoft-Store-Fassung:** Das Paket baut GitHub Actions aus diesem Repository
+  (`tools/build_msix.py`); nach der Zertifizierung signiert Microsoft es mit dem Zertifikat des
+  Microsoft Store. Deshalb läuft diese Fassung auch mit eingeschalteter intelligenter App-Steuerung.
+- **Installer (GitHub-Releases):** nicht signiert – auf PCs mit intelligenter App-Steuerung bitte die
+  Store-Fassung verwenden (siehe [Fehlerbehebung](#fehlerbehebung)).
+- Ein Antrag auf kostenlose Open-Source-Signatur bei der SignPath Foundation wurde im Oktober 2026
+  abgelehnt (zu geringe Verbreitung). Der Signierablauf im Workflow (`tools/signing.py`, zwei
+  Inno-Durchläufe) bleibt für ein späteres eigenes Zertifikat erhalten und wird bei jedem CI-Lauf
+  mit einem Test-Zertifikat geprüft.
 
 ### Datenschutz
 
@@ -731,6 +761,9 @@ ausdrücklich:
   öffentliche GitHub-API (`api.github.com`); übertragen werden dabei nur die üblichen
   Verbindungsdaten (z. B. die IP-Adresse) und die Programmversion.
 - **Update-Download** – nur nach Klick auf *Jetzt aktualisieren* (von `github.com`).
+- **Microsoft-Store-Fassung:** Das Programm selbst sucht nicht nach Updates und baut keine
+  Verbindung auf; Updates verteilt der Microsoft Store (es gelten die Datenschutzbestimmungen von
+  Microsoft für den Store).
 - **Links**, z. B. zur Download-Seite, öffnen sich nur auf Klick im Browser.
 
 Es gibt keine Telemetrie, keine Nutzungsstatistik und keine Absturzberichte ins Internet; Projekte,

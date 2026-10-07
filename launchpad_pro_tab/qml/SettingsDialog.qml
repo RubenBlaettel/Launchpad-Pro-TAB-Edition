@@ -18,6 +18,7 @@ AppDialog {
     readonly property var kindText: ({
         "windows-installer": "Installiert (Windows-Installer)",
         "windows-portable": "Portable Version (ohne Installer)",
+        "microsoft-store": "Microsoft Store",
         "linux-bundle": "Linux-Programmpaket",
         "source": "Python-Quellcode",
         "unsupported": "–"
@@ -265,10 +266,21 @@ AppDialog {
                             }
                             Text {
                                 Layout.fillWidth: true
+                                visible: !updater.storeManaged
                                 text: updater.lastCheckText
                                 color: Theme.textMute
                                 font.family: Theme.fontFamily
                                 font.pixelSize: Theme.fontSmall
+                            }
+                            Text {
+                                objectName: "storeUpdateText"
+                                Layout.fillWidth: true
+                                visible: updater.storeManaged
+                                text: "Diese Fassung stammt aus dem Microsoft Store. Windows hält sie automatisch aktuell."
+                                color: Theme.textDim
+                                font.family: Theme.fontFamily
+                                font.pixelSize: Theme.fontBody
+                                wrapMode: Text.Wrap
                             }
                         }
                     }
@@ -277,7 +289,15 @@ AppDialog {
                     Layout.fillWidth: true
                     spacing: 10
                     AppButton {
+                        objectName: "storeUpdatesButton"
+                        visible: updater.storeManaged
+                        text: "Updates im Microsoft Store anzeigen"
+                        iconName: "external"
+                        onClicked: updater.openStore()
+                    }
+                    AppButton {
                         objectName: "checkUpdatesButton"
+                        visible: !updater.storeManaged
                         text: updater.state === "checking" ? "Suche läuft …" : "Jetzt nach Updates suchen"
                         iconName: "refresh"
                         enabled: updater.state !== "checking" && updater.state !== "downloading" && updater.state !== "installing"
@@ -294,6 +314,7 @@ AppDialog {
                 }
                 AppSwitch {
                     objectName: "autoCheckSwitch"
+                    visible: !updater.storeManaged
                     Layout.fillWidth: true
                     Layout.topMargin: 4
                     text: "Beim Start automatisch nach Updates suchen"
@@ -302,6 +323,7 @@ AppDialog {
                     onToggled: updater.setAutoCheck(checked)
                 }
                 AppSwitch {
+                    visible: !updater.storeManaged
                     Layout.fillWidth: true
                     text: "Vorabversionen (Beta) anbieten"
                     subText: "Neue Funktionen testen, bevor sie für alle freigegeben werden"
@@ -311,7 +333,9 @@ AppDialog {
                 Text {
                     Layout.fillWidth: true
                     wrapMode: Text.Wrap
-                    text: "Updates werden aus den Releases auf GitHub geladen und vor der Installation per SHA-256-Prüfsumme geprüft."
+                    text: updater.storeManaged
+                          ? "Launchpad Pro sucht in dieser Fassung nicht selbst nach Updates und baut keine Verbindung ins Internet auf."
+                          : "Updates werden aus den Releases auf GitHub geladen und vor der Installation per SHA-256-Prüfsumme geprüft."
                     color: Theme.textMute
                     font.family: Theme.fontFamily
                     font.pixelSize: Theme.fontSmall
