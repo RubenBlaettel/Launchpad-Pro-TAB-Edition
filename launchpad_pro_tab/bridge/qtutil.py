@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
-from PySide6.QtCore import Property, QObject, QUrl, Signal
+from PySide6.QtCore import Property, QFile, QObject, QUrl, Signal
 
 
 def rprop(ptype: Any, attr: str, notify: Signal) -> Property:
@@ -33,3 +34,11 @@ def to_local_path(url_or_path: Any) -> str:
 
 def file_url(path: str | None) -> str:
     return QUrl.fromLocalFile(str(path)).toString() if path else ""
+
+
+def move_to_trash(path: Path) -> bool:
+    """Datei/Ordner in den Papierkorb des Systems verschieben (Windows, macOS, Linux/freedesktop).
+
+    ``False``, wenn das nicht geht (Datei in Verwendung, kein Papierkorb auf dem Laufwerk) –
+    es wird dann nichts gelöscht und es erscheint kein System-Dialog."""
+    return bool(QFile.moveToTrash(str(path)))

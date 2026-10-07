@@ -40,6 +40,15 @@ Item {
                 Component.onCompleted: opacity = 1
                 Behavior on opacity { NumberAnimation { duration: 160 } }
 
+                // Meldungen liegen über den Kacheln: Klicks/Berührungen abfangen (sonst löst die
+                // Kachel darunter aus). Antippen schließt reine Hinweise sofort.
+                MouseArea {
+                    anchors.fill: parent
+                    acceptedButtons: Qt.AllButtons
+                    hoverEnabled: true
+                    onClicked: if (toast.action === "") toastModel.remove(toast.index)
+                }
+
                 RowLayout {
                     id: row
                     anchors.fill: parent

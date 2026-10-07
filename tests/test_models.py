@@ -52,6 +52,18 @@ def test_project_resize_discards_outside_tiles():
     assert p.resize(7) == [] and p.grid == 7
 
 
+def test_project_swap_tiles():
+    p = ProjectData(name="Test", grid=4)
+    p.tile(0, 0).audio = "audio/a.wav"
+    p.tile(2, 3).audio = "audio/b.wav"
+    p.swap((0, 0), (2, 3))                  # zwei belegte Kacheln tauschen die Plätze
+    assert p.peek(0, 0).audio == "audio/b.wav" and (p.peek(0, 0).row, p.peek(0, 0).col) == (0, 0)
+    assert p.peek(2, 3).audio == "audio/a.wav" and (p.peek(2, 3).row, p.peek(2, 3).col) == (2, 3)
+    p.swap((2, 3), (1, 1))                  # auf einen leeren Platz verschieben
+    assert p.peek(2, 3) is None and p.peek(1, 1).audio == "audio/a.wav"
+    assert ProjectData.from_dict(p.to_dict()).peek(1, 1).audio == "audio/a.wav"
+
+
 def test_project_serialization_only_keeps_content():
     p = ProjectData(name="Stück", grid=3)
     p.tile(0, 0).audio = "audio/a.wav"

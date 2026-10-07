@@ -21,7 +21,8 @@ THEME_MODES = ("dark", "light", "system")
 
 @dataclass
 class AppSettings:
-    last_project: str | None = None
+    last_project: str | None = None      # aktive Registerkarte beim Beenden
+    open_projects: list[str] | None = None  # alle offenen Registerkarten (None = ältere Version)
     recent_projects: list[dict[str, Any]] = field(default_factory=list)
     recent_audio: list[dict[str, Any]] = field(default_factory=list)
     audio_device: str | None = None      # Gerätename (None = Standard)
@@ -31,6 +32,7 @@ class AppSettings:
     projects_dir: str | None = None
     window: dict[str, Any] = field(default_factory=dict)
     theme: str = "dark"                  # "dark" | "light" | "system"
+    fullscreen: bool = False             # im Vollbild starten (Einstellungen → Darstellung, F11)
     update_auto_check: bool = True       # beim Start nach Updates suchen
     update_prereleases: bool = False     # auch Vorabversionen (Beta) anbieten
     update_skipped: str | None = None    # "Diese Version überspringen"
@@ -72,6 +74,9 @@ class AppSettings:
             self.recent_audio = []
         self.recent_projects = [p for p in self.recent_projects if isinstance(p, dict) and p.get("path")]
         self.recent_audio = [a for a in self.recent_audio if isinstance(a, dict) and a.get("path")]
+        if self.open_projects is not None:
+            raw = self.open_projects if isinstance(self.open_projects, list) else []
+            self.open_projects = [p for p in raw if isinstance(p, str) and p]
         try:
             self.buffer_frames = int(self.buffer_frames)
         except (TypeError, ValueError):
@@ -82,6 +87,7 @@ class AppSettings:
             self.stop_fade_ms = STOP_FADE_MS_DEFAULT
         if self.theme not in THEME_MODES:
             self.theme = "dark"
+        self.fullscreen = self.fullscreen is True
         self.update_auto_check = bool(self.update_auto_check)
         self.update_prereleases = bool(self.update_prereleases)
         for key in ("update_skipped", "update_last_check", "last_version"):
@@ -100,6 +106,14 @@ class AppSettings:
         self.recent_projects = [p for p in self.recent_projects if p.get("path") != path]
         if self.last_project == path:
             self.last_project = None
+        if self.open_projects:
+            self.open_projects = [p for p in self.open_projects if p != path]
+
+    def projects_to_restore(self) -> list[str]:
+        """Beim Start wiederherzustellende Registerkarten (ältere Einstellungen: nur das letzte Projekt)."""
+        if self.open_projects is not None:
+            return list(self.open_projects)
+        return [self.last_project] if self.last_project else []
 
     def remember_audio(self, path: Path, duration: float | None = None) -> dict[str, Any]:
         key = str(Path(path).resolve())

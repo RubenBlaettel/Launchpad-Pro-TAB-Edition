@@ -1,11 +1,13 @@
 import QtQuick
 import QtQuick.Layouts
 
-// Startbildschirm, solange kein Projekt geöffnet ist.
+// Startbildschirm einer leeren Registerkarte: Neues Projekt, Projekt öffnen und die zuletzt
+// geöffneten Projekte zum schnellen Wiederöffnen.
 Item {
     id: welcome
     signal newRequested()
     signal openRequested()
+    signal deleteRequested(string path, string name, bool exists, bool open)
 
     ColumnLayout {
         anchors.centerIn: parent
@@ -51,6 +53,25 @@ Item {
                 Layout.preferredWidth: 230
                 font.pixelSize: Theme.fontLarge
                 onClicked: welcome.openRequested()
+            }
+        }
+
+        // Zuletzt geöffnete Projekte (Schnellzugriff)
+        ColumnLayout {
+            Layout.fillWidth: true
+            Layout.topMargin: 6
+            spacing: 2
+            visible: backend.recentProjects.count > 0
+            FieldLabel { text: "Zuletzt geöffnet"; Layout.leftMargin: 10; Layout.bottomMargin: 4 }
+            Repeater {
+                model: backend.recentProjects
+                delegate: ProjectRow {
+                    required property int index
+                    visible: index < 4
+                    Layout.fillWidth: true
+                    onClicked: backend.openProject(path)
+                    onDeleteRequested: welcome.deleteRequested(path, name, exists, open)
+                }
             }
         }
     }

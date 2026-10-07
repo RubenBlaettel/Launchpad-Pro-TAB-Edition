@@ -87,6 +87,7 @@ AppDialog {
                 TapHandler {
                     id: rowTap
                     enabled: row.exists
+                    gesturePolicy: TapHandler.ReleaseWithinBounds   // exklusiv: kein Klick an die Kachel dahinter
                     onTapped: { if (backend.openProject(row.path)) dlg.close() }
                 }
             }

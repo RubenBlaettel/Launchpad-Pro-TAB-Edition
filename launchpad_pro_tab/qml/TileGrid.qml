@@ -4,6 +4,7 @@ import QtQuick
 Item {
     id: area
     signal menuRequested(int index)
+    property Item dragProxy: null     // für das Verschieben von Kacheln (Main.qml)
 
     readonly property int n: Math.max(1, backend.gridSize)
     readonly property real gap: n >= 6 ? 10 : 14
@@ -22,6 +23,7 @@ Item {
                 objectName: "tile_" + index
                 width: area.cell
                 height: area.cell
+                dragProxy: area.dragProxy
                 onMenuRequested: (i) => area.menuRequested(i)
             }
         }

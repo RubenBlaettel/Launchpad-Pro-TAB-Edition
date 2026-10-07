@@ -1,7 +1,7 @@
 import QtQuick
 
 // Vertikaler Fader im Mischpult-Stil (angelehnt an Bild 3):
-// schwarze Fader-Bahn mit Skala, heller Fader-Knopf, Wertanzeige und Beschriftung.
+// Fader-Bahn mit Skala (dunkel: schwarz, hell: hellgrau), heller Fader-Knopf, Wertanzeige und Beschriftung.
 // Arbeitet in dB, liefert/erwartet aber einen linearen Faktor (1.0 = 100 %).
 // Rastpunkt bei ``detentDb`` (Normalstellung), Doppeltippen setzt darauf zurück.
 Rectangle {
@@ -37,6 +37,7 @@ Rectangle {
     // ------------------------------------------------------ Fader-Bahn
     Rectangle {
         id: track
+        objectName: "faderTrack"
         anchors.top: parent.top
         anchors.left: parent.left
         anchors.right: parent.right
@@ -65,7 +66,7 @@ Rectangle {
                     anchors.rightMargin: 4
                     anchors.verticalCenter: parent.verticalCenter
                     text: modelData.text
-                    color: Math.abs(modelData.db - fader.detentDb) < 0.01 ? "#FFFFFF" : Theme.faderScale
+                    color: Math.abs(modelData.db - fader.detentDb) < 0.01 ? Theme.faderScaleStrong : Theme.faderScale
                     font.family: Theme.fontFamily
                     font.pixelSize: 10
                     font.weight: Math.abs(modelData.db - fader.detentDb) < 0.01 ? Font.Bold : Font.Normal
@@ -87,8 +88,8 @@ Rectangle {
             width: 3
             height: track.height - 16
             radius: 1.5
-            color: "#2B2D33"
-            border.color: "#000000"
+            color: Theme.faderSlot
+            border.color: Theme.faderSlotBorder
         }
         // Fader-Knopf
         Rectangle {

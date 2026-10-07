@@ -37,6 +37,10 @@ Popup {
         border.color: Theme.borderStrong
     }
 
+    // Offene Dialoge zählen (UiState.modalOpen) – solange einer offen ist, ignorieren die
+    // Kacheln dahinter jede Eingabe.
+    onVisibleChanged: UiState.modalCount = Math.max(0, UiState.modalCount + (visible ? 1 : -1))
+
     contentItem: ColumnLayout {
         spacing: 0
         RowLayout {

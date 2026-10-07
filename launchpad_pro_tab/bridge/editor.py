@@ -38,6 +38,7 @@ from ..core.util import format_time, now_iso
 from .qtutil import PropertyObject, rprop
 
 if TYPE_CHECKING:  # pragma: no cover
+    from ..core.project import Project
     from .backend import Backend
 
 log = logging.getLogger(__name__)
@@ -112,6 +113,25 @@ class EditorController(PropertyObject):
     @property
     def key(self) -> tuple[int, int] | None:
         return self._key if (self._active or self._loading) else None
+
+    @Slot(int, result=bool)
+    def editsTile(self, index: int) -> bool:  # noqa: N802
+        """Wird Kachel ``index`` der aktiven Karte gerade bearbeitet (oder dafür geladen)?"""
+        key, project = self.key, self._backend.project
+        return key is not None and project is not None and project.data.index_of(*key) == index
+
+    def move_key(self, mapping: dict[tuple[int, int], tuple[int, int]]) -> None:
+        """Kacheln wurden verschoben/getauscht: die bearbeitete Kachel zieht mit um."""
+        if self.key is None or self._key not in mapping:
+            return
+        self._key = mapping[self._key]
+        project = self._backend.project
+        tile = project.data.peek(*self._key) if project is not None else None
+        if tile is not None:
+            self._tile_label = f"Kachel {project.data.index_of(*self._key) + 1} · {tile.display_title}"
+            self.infoChanged.emit()
+        self._touch()
+        self.write_session()
 
     # ------------------------------------------------------------------
     # Formatierte Texte für die Oberfläche
@@ -498,7 +518,7 @@ class EditorController(PropertyObject):
         if params.is_identity(self._duration):
             tile = project.data.peek(*key)
             if tile is not None and tile.is_edited:
-                backend.apply_edit(key, None, None, None)
+                backend.apply_edit(project, key, None, None, None)
                 backend.notify("Bearbeitung entfernt – die Kachel spielt wieder das Original.", "success")
             else:
                 backend.notify("Keine Änderungen – die Kachel bleibt unverändert.", "info")
@@ -512,23 +532,24 @@ class EditorController(PropertyObject):
         token = self._token
         backend.runner.submit_process(
             tasks.render_edit, str(src), str(project.cache_dir), self._sr, params.to_dict(), str(out),
-            on_done=lambda res: self._on_rendered(token, key, params, out, res),
+            on_done=lambda res: self._on_rendered(token, project, key, params, out, res),
             on_error=lambda msg: self._on_render_failed(token, msg),
         )
 
-    def _on_rendered(self, token: int, key: tuple[int, int], params: EditParams, out: Path, res: dict) -> None:
+    def _on_rendered(self, token: int, project: Project, key: tuple[int, int], params: EditParams, out: Path,
+                     res: dict) -> None:
+        # ``project`` = Projekt, in dem bearbeitet wurde (die Registerkarte kann inzwischen gewechselt sein)
         backend = self._backend
-        project = backend.project
-        if project is None:
-            return
         entry = CacheEntry.from_dict(res["cache"])
-        backend.apply_edit(key, params, project.rel(out), entry)
+        backend.apply_edit(project, key, params, project.rel(out), entry)
         msg = f"Bearbeitung gespeichert ({format_time(res['duration'], True)})."
         if res.get("limited"):
             msg += " Der Limiter hat Übersteuerungen abgefangen."
         backend.notify(msg, "success")
         if token == self._token:
             self.close(keep_session=False)
+        else:
+            project.clear_edit_session()  # beim Kartenwechsel geparkter Zwischenstand ist erledigt
 
     def _on_render_failed(self, token: int, message: str) -> None:
         if token == self._token:

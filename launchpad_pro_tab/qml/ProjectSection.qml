@@ -1,13 +1,17 @@
 import QtQuick
+import QtQuick.Controls.Basic
 import QtQuick.Layouts
 import QtQuick.Dialogs
+import QtQuick.Templates as T
 import QtCore
 
-// Optionen › Projekt: aktuelles Projekt, Öffnen, Neu, Speichern, Speichern unter, Export.
+// Optionen › Projekt: aktuelles Projekt (mit Auswahl der zuletzt geöffneten Projekte), Öffnen,
+// Neu, Speichern, Speichern unter, Export.
 Card {
     id: card
     signal openRequested()
     signal newRequested()
+    signal deleteRequested(string path, string name, bool exists, bool open)   // Papierkorb in der Auswahl
     implicitHeight: col.implicitHeight + 2 * padding
 
     ColumnLayout {
@@ -31,19 +35,26 @@ Card {
         RowLayout {
             Layout.fillWidth: true
             spacing: 8
-            Rectangle {
+            // Aktuelles Projekt – zugleich Projektauswahl (Dropdown der zuletzt geöffneten Projekte)
+            T.AbstractButton {
+                id: field
+                objectName: "projectField"
                 Layout.fillWidth: true
                 Layout.preferredHeight: Theme.touch
-                radius: Theme.radiusSmall
-                color: Theme.field
-                border.color: Theme.border
-                RowLayout {
-                    anchors.fill: parent
-                    anchors.leftMargin: 12
-                    anchors.rightMargin: 12
+                hoverEnabled: true
+                focusPolicy: Qt.NoFocus
+                leftPadding: 12
+                rightPadding: 12
+                onClicked: picker.open()
+                background: Rectangle {
+                    radius: Theme.radiusSmall
+                    color: field.pressed ? Theme.cardPressed : (field.hovered ? Theme.cardHover : Theme.field)
+                    border.color: picker.visible ? Theme.accent : Theme.border
+                }
+                contentItem: RowLayout {
                     spacing: 10
                     Rectangle {
-                        width: 10; height: 10; radius: 5
+                        implicitWidth: 10; implicitHeight: 10; radius: 5
                         color: !backend.hasProject ? Theme.textMute : (backend.dirty ? Theme.warning : Theme.accent)
                     }
                     Column {
@@ -68,7 +79,15 @@ Card {
                             elide: Text.ElideMiddle
                         }
                     }
+                    Icon {
+                        name: "chevron-down"
+                        size: 16
+                        color: Theme.textDim
+                        rotation: picker.visible ? 180 : 0
+                        Behavior on rotation { NumberAnimation { duration: 120 } }
+                    }
                 }
+                ToolTipLite { text: "Zuletzt geöffnete Projekte"; shown: field.hovered && !field.pressed && !picker.visible }
             }
             AppButton {
                 text: "Öffnen"
@@ -117,6 +136,71 @@ Card {
                 enabled: !backend.showMode
                 toolTipText: "Projekt als ZIP-Datei exportieren  [Strg+E]"
                 onClicked: card.exportZip()
+            }
+        }
+    }
+
+    // Projektauswahl: zuletzt geöffnete Projekte; offene springen zu ihrer Registerkarte,
+    // alle anderen öffnen sich in einer neuen Karte.
+    Popup {
+        id: picker
+        objectName: "projectPicker"
+        parent: field
+        y: field.height + 6
+        width: field.width
+        height: Math.min(implicitHeight, 440)
+        padding: 6
+        modal: true            // Klick daneben schließt nur – nichts dahinter wird ausgelöst
+        dim: false
+        focus: true
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+        onVisibleChanged: UiState.modalCount = Math.max(0, UiState.modalCount + (visible ? 1 : -1))
+
+        background: Rectangle {
+            radius: Theme.radiusSmall
+            color: Theme.panel
+            border.color: Theme.borderStrong
+        }
+        contentItem: ColumnLayout {
+            spacing: 4
+            FieldLabel {
+                Layout.leftMargin: 8
+                Layout.topMargin: 4
+                text: "Zuletzt geöffnete Projekte"
+            }
+            ListView {
+                id: recentView
+                Layout.fillWidth: true
+                Layout.preferredHeight: Math.min(contentHeight, 320)
+                clip: true
+                spacing: 2
+                model: backend.recentProjects
+                boundsBehavior: Flickable.StopAtBounds
+                ScrollBar.vertical: ScrollBar { policy: recentView.contentHeight > recentView.height ? ScrollBar.AsNeeded : ScrollBar.AlwaysOff }
+                delegate: ProjectRow {
+                    width: ListView.view.width
+                    onClicked: { picker.close(); backend.openProject(path) }
+                    onDeleteRequested: { picker.close(); card.deleteRequested(path, name, exists, open) }
+                }
+            }
+            Text {
+                Layout.fillWidth: true
+                Layout.margins: 10
+                visible: recentView.count === 0
+                horizontalAlignment: Text.AlignHCenter
+                text: "Noch keine Projekte geöffnet."
+                color: Theme.textMute
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.fontSmall
+            }
+            AppButton {
+                Layout.fillWidth: true
+                implicitHeight: 42
+                visible: !backend.showMode
+                text: "Weitere Projekte öffnen …"
+                iconName: "folder"
+                variant: "ghost"
+                onClicked: { picker.close(); card.openRequested() }
             }
         }
     }

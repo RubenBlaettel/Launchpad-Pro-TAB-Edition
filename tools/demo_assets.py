@@ -169,6 +169,31 @@ SOUNDS = {
 
 
 def write_sounds(target: Path) -> dict[str, Path]:
+    # Der MP3-Encoder (LAME in libsndfile) braucht mehr Stack, als der Windows-Hauptthread hat
+    # (1 MB) – dort stürzte das Skript mit STATUS_STACK_OVERFLOW ab. Daher in einem eigenen Thread.
+    import threading
+
+    result: dict[str, object] = {}
+
+    def work() -> None:
+        try:
+            result["paths"] = _write_sounds(target)
+        except BaseException as exc:  # im aufrufenden Thread erneut auslösen
+            result["error"] = exc
+
+    previous = threading.stack_size(64 * 1024 * 1024)
+    try:
+        thread = threading.Thread(target=work, name="DemoSounds")
+        thread.start()
+    finally:
+        threading.stack_size(previous)
+    thread.join()
+    if "error" in result:
+        raise result["error"]
+    return result["paths"]
+
+
+def _write_sounds(target: Path) -> dict[str, Path]:
     import soundfile as sf
 
     target.mkdir(parents=True, exist_ok=True)

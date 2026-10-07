@@ -28,7 +28,7 @@ import numpy as np
 from ..core.constants import STOP_FADE_MS_DEFAULT
 from .cache import warm
 from .output import NullBackend, OutputBackend, SoundDeviceBackend, list_output_devices, pick_device
-from .timestretch import WsolaStretcher
+from .timestretch import TimeStretcher
 
 log = logging.getLogger(__name__)
 
@@ -90,7 +90,7 @@ class _PreviewVoice:
     def __init__(self, data: np.ndarray, samplerate: int):
         self.data = data
         self.samplerate = samplerate
-        self.stretcher = WsolaStretcher(data, samplerate)
+        self.stretcher = TimeStretcher(data, samplerate)
         self.playing = False       # logischer Zustand (für die UI)
         self.env = 0.0             # Anti-Klick-Hüllkurve
         self.env_target = 0.0
@@ -285,6 +285,17 @@ class AudioEngine:
     def stop_all(self) -> None:
         self._cmds.append(("stop_all",))
 
+    def stop_group(self, group: Hashable) -> None:
+        """Blendet alle Stimmen mit Schlüssel ``(group, …)`` aus (z. B. eine Registerkarte)."""
+        self._cmds.append(("stop_group", group))
+
+    def rekey(self, mapping: dict[Hashable, Hashable]) -> None:
+        """Laufende Stimmen umbenennen (Kacheln verschoben/getauscht) – sie spielen ungestört weiter."""
+        mapping = dict(mapping)
+        self._cmds.append(("rekey", mapping))
+        # Anzeige sofort umstellen; ab dem nächsten Audio-Block liefert der Mixer die neuen Schlüssel
+        self.snapshot = {mapping.get(k, k): v for k, v in self.snapshot.items()}
+
     def set_loop(self, key: Hashable, loop: bool) -> None:
         self._cmds.append(("loop", key, loop))
 
@@ -365,6 +376,18 @@ class AudioEngine:
                 if pv is not None and pv.playing:
                     pv.playing = False
                     pv.env_target = 0.0
+            elif op == "stop_group":
+                group = cmd[1]
+                for v in self._voices:
+                    k = v.key
+                    if not v.stopping and type(k) is tuple and k and k[0] == group:
+                        v.fade_out(self._fade_frames())
+            elif op == "rekey":
+                mapping = cmd[1]
+                for v in self._voices:
+                    new = mapping.get(v.key)
+                    if new is not None:
+                        v.key = new
             elif op == "kill":
                 for v in self._voices:
                     if v.key == cmd[1]:
@@ -478,21 +501,26 @@ class AudioEngine:
 
     def _prefetch_loop(self) -> None:
         while self._prefetch_run:
-            ahead = int(self.samplerate * 4)
-            for v in list(self._voices):
-                try:
-                    warm(v.data, v.pos, ahead)
-                    if v.loop:
-                        warm(v.data, 0, ahead)
-                except Exception:
-                    pass
-            pv = self._preview
-            if pv is not None and pv.playing:
-                try:
-                    warm(pv.data, int(pv.stretcher.position), ahead)
-                except Exception:
-                    pass
+            self._prefetch_once()
             time.sleep(0.2)
+
+    def _prefetch_once(self) -> None:
+        # Eigene Methode: Schleifenvariablen dürfen die Pause nicht überdauern – sonst hielte der
+        # Thread die zuletzt gespielte Stimme samt memmap fest (Windows sperrt dann den Projektordner).
+        ahead = int(self.samplerate * 4)
+        for v in list(self._voices):
+            try:
+                warm(v.data, v.pos, ahead)
+                if v.loop:
+                    warm(v.data, 0, ahead)
+            except Exception:
+                pass
+        pv = self._preview
+        if pv is not None and pv.playing:
+            try:
+                warm(pv.data, int(pv.stretcher.position), ahead)
+            except Exception:
+                pass
 
     # ------------------------------------------------------------------
     # Offline-Mixdown (für Tests)

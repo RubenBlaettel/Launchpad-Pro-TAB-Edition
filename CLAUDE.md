@@ -30,9 +30,14 @@ Kommentare, Doku: **Deutsch**. Aktuelle Version: siehe `launchpad_pro_tab/__init
 |---|---|
 | Technologie (v1.0) | **Python + PySide6 (Qt 6, QML/Qt Quick)** |
 | Antippen einer laufenden Kachel (v1.0) | **Start/Stopp-Umschalter**, mehrere Kacheln parallel, Schleife je Kachel, „ALLES STOPPEN“ |
-| Tempo-Regler (v1.0) | **Tonhöhe bleibt erhalten** (Time-Stretch, WSOLA), 0,5×–2,0×, Rastpunkt 1,0× |
+| Tempo-Regler (v1.0) | **Tonhöhe bleibt erhalten** (Time-Stretch), 0,5×–2,0×, Rastpunkt 1,0× – seit v1.2 Phase-Vocoder statt WSOLA (siehe unten) |
 | Update-Quelle (v1.1) | Repo war privat → Nutzer macht das **Repository öffentlich**; Updates direkt aus dessen GitHub-Releases (keine Tokens). |
 | Erstes Release (v1.1) | **v1.1.0 veröffentlichen** (Tag → Release-Workflow). |
+| Registerkarten: Wiedergabe beim Wechsel (v1.2) | **Weiterspielen** wie ein Browser-Tab; Karte zeigt ▶ + Anzahl; „ALLES STOPPEN“ stoppt alle Karten. |
+| Kachel ziehen vs. Maus-Start beim Drücken (v1.2) | Klick startet **weiterhin sofort beim Drücken**; wird daraus ein Ziehen, bricht der gerade gestartete Ton ab (`backend.stopTile`). Touch: Ziehen spielt nichts ab. |
+| Fader im hellen Modus (v1.2) | **Alle** Fader-Bahnen (Master + Lautstärke im Editor) hellgrau – ersetzt „Fader-Bahnen bleiben schwarz“. |
+| Projekte löschen (v1.2) | In der Projektauswahl/Startseite per Papierkorb-Knopf → **in den Papierkorb des Systems** (nicht endgültig), mit Rückfrage. **Offene Projekte**: speichern, Karte schließen, dann löschen. |
+| „Hitboxen hinter Pop-ups“ (v1.2) | Trat bei offenen Dialogen mit Maus **und** Touch auf → Ursache siehe Stolperfallen (TapHandler in Pop-ups). |
 
 ### Eigene Designentscheidungen (begründet, bei Bedarf mit Nutzer abstimmen)
 
@@ -50,7 +55,65 @@ Kommentare, Doku: **Deutsch**. Aktuelle Version: siehe `launchpad_pro_tab/__init
 - **Design (v1.1):** Standard bleibt **Dunkel** (Bühne). Modi: `dark` / `light` / `system`
   (`AppSettings.theme`). Schnellumschalter (Sonne/Mond) in der Kopfleiste schaltet Dunkel↔Hell.
   Im hellen Modus: Akzentfarben dunkler (Kontrast ≥ 4,5:1 auf Weiß), Wellenform hell mit grünem
-  Verlauf, **Fader-Bahnen bleiben schwarz** (Mischpult-Optik, Bild 3), Logo bleibt dunkel.
+  Verlauf, **Fader-Bahnen hellgrau** mit dunkler Skala (v1.2, Nutzerwunsch; dunkel: schwarz wie am
+  Mischpult), Logo bleibt dunkel.
+- **Registerkarten (v1.2):** „Neu“, „Öffnen“ und die Projektauswahl öffnen in einer **neuen** Karte
+  (eine leere aktive Karte wird wiederverwendet); ist das Projekt schon offen, wird nur dorthin
+  gewechselt. Höchstens **eine leere Karte** (Startseite mit zuletzt geöffneten Projekten), immer
+  mindestens eine Karte. Schließen speichert vorher (schlägt das fehl, bleibt die Karte offen) und
+  blendet die Kacheln der Karte aus. Offene Karten stehen in `settings.open_projects`, die aktive in
+  `last_project`; beim Start stellt `Backend.restore_tabs()` sie wieder her. Show-Modus: nur
+  Wechseln, kein Öffnen/Schließen. Eine offene Bearbeitung wird beim Wechsel geparkt
+  (`close(keep_session=True)`) und beim Zurückwechseln still wiederhergestellt.
+- **Kacheln verschieben (v1.2):** Ziehen auf eine andere Kachel tauscht die Plätze
+  (`ProjectData.swap`); laufende Stimmen werden in der Engine umbenannt (`engine.rekey`) und spielen
+  weiter, die Bearbeitung zieht mit (`editor.move_key`). Gesperrt im Show-Modus, während eine Kachel
+  lädt und während der Editor speichert. Die Drag-Miniatur schwebt **über** dem Finger, damit der
+  Hinweis auf der Zielkachel sichtbar bleibt.
+- **Projekt löschen (v1.2):** `backend.deleteProject(path)` – nur Ordner mit gültiger
+  `projekt.lptab` (`purge.is_project_dir`), nie `purge.protected_dirs()`/Laufwerkswurzel; fehlt der
+  Ordner, nur `forgetProject`. Offene Karte → `_close_tab` (speichert, parkt den Editor; schlägt
+  das Speichern fehl, wird nicht gelöscht), dann `tab.pcm.clear()`. Papierkorb über
+  `qtutil.move_to_trash` (`QFile.moveToTrash`, kein System-Dialog) – austauschbar als
+  `backend.move_to_trash` (Tests). Unter Windows scheitert das, solange Dateien des Ordners gemappt
+  sind (ausblendende Stimmen, Vorschau, Worker) → bis zu 25 Versuche im Abstand von 200 ms mit
+  `gc.collect()`, danach Fehlermeldung. Rückfrage: `Main.qml` `requestDeleteProject()` +
+  `deleteProjectDialog`. `ProjectRow` ist deshalb ein `Item` (Zeile + Papierkorb daneben), damit der
+  Knopf auch bei ausgegrauten „nicht gefunden“-Zeilen bedienbar bleibt.
+- **Kachel in den Editor ziehen (v1.2, Nutzerwunsch):** DropArea über dem ganzen Bereich
+  *Bearbeiten & Schneiden* (`EditorSection.qml`, Schlüssel `application/x-lptab-tile`) →
+  `backend.editTile(i)` wie der Menüpunkt. Während eine Kachel gezogen wird, ist der Bereich
+  umrandet; der Hinweis steht in der Hälfte, die der Zeiger **nicht** belegt (über dem Finger
+  schwebt die Miniatur). Dieselbe Kachel erneut ablegen = nichts tun (`editor.editsTile(i)`), eine
+  andere ersetzt die offene Bearbeitung (Hinweis warnt), beim Speichern gesperrt. Die DropArea
+  nimmt jeden Kachel-Drag an (sonst kein `exited`) und entscheidet erst in `onDropped`.
+- **Vollbild (v1.2, Nutzerwunsch):** Schalter unter *Einstellungen › Darstellung › Fenster*,
+  gespeichert in `AppSettings.fullscreen` → Start direkt im Vollbild (Kontext-Property
+  `startFullscreen`). Quelle der Wahrheit ist das Fenster: `Main.qml` meldet jede Änderung von
+  `visibility` (auch F11, Fenstersystem) an `backend.setFullscreen()`; Minimieren/Ausblenden zählt
+  nicht. Verlassen → vorheriger Zustand (maximiert/Fenster). `--fullscreen` setzt nur für diesen
+  Start (`Backend.start_fullscreen()`), ohne die Einstellung zu ändern. Der Schalter ist
+  `checkable: false` (sonst reißt die Bindung an `backend.fullscreen` nach dem ersten Klick ab).
+- **Time-Stretch = Phase-Vocoder (v1.2, Nutzerwunsch „Aufnahme wirkt beim Ändern der
+  Schnelligkeit verzerrt“):** WSOLA (40-ms-Fenster, alle 20 ms Überblendung) erzeugte bei
+  mehrstimmigem Material ~50-Hz-Modulation (rau, „kratzig“). `audio/timestretch.py` →
+  `TimeStretcher`: Hann N = 4096 bei 44,1/48 kHz (≈ 85 ms), 75 % Überlappung; Phasenfortschritt
+  aus einem zweiten Spektrum genau einen Synthese-Hop früher (kein Unwrapping, auch bei 2×
+  eindeutig); Identity Phase Locking; **eine** Phasendrehung für beide Kanäle (Bezug:
+  betragsgewichtete Summe, Stereobild bleibt); Transienten (≥ 35 % der Frequenzen +5 dB je Hop):
+  Phasen-Reset + 3 Fenster Tempo 1, danach Zeitausgleich (25 %/Fenster). Einsatz nur in einem
+  Kanal → nur ansteigende Frequenzen zurücksetzen (sonst leiden Töne im anderen Kanal).
+  Messwerte alt → neu (Störanteil abseits der Töne, Akkord mit Bass + Cmaj7): 0,5× −10 → −39 dB,
+  0,75× −9 → −44 dB, 1,5× −10 → −42 dB, 2× −10 → −31 dB; Schläge ohne Vorecho (vorher
+  verdoppelt bei 0,5×), Stereo-Laufzeit exakt erhalten. Kompromisse: Sprache bei 0,5× etwas
+  weicher (Scheitelfaktor 2,26 statt 2,53 bei WSOLA, Original 2,72; ab 0,75× gleichauf), Anschläge sitzen konstant
+  bis ≈ 30 ms (0,5×) neben der idealen Stelle (Rhythmus gleichmäßig, ±5 ms), Tempo-Änderungen
+  greifen nach 2 Fenstern (≈ 43 ms), CPU Vorschau ≈ 2,6 % statt 1 %. Verworfen: kürzere Fenster
+  (Akkorde −15 dB), längere (Anschläge/Sprache schlechter), 87,5 % Überlappung (kein Gewinn,
+  doppelte CPU), float32 (kaum schneller, nicht mehr exakt bei 1,0×). Bereits gerenderte
+  Bearbeitungen werden nicht automatisch neu berechnet (erneut speichern genügt).
+- **Hinweis-Meldungen (v1.2)** fangen Klicks ab (sonst löst die Kachel darunter aus); Antippen
+  schließt Meldungen ohne Aktion, Meldungen mit „Rückgängig“/„Anzeigen“ bleiben.
 - **Installer (v1.1):** Inno Setup 7, 64-Bit, `C:\Program Files\Launchpad Pro TAB Edition`, drei
   Checkboxen (Desktop, Startmenü, Dateizuordnung `.lptab`, alle an), Wartungsseite beim erneuten
   Start („Aktualisieren/Reparieren“ oder „Deinstallieren“), Deinstaller mit Checkbox „Alle Projekte
@@ -66,7 +129,7 @@ Kommentare, Doku: **Deutsch**. Aktuelle Version: siehe `launchpad_pro_tab/__init
 ```bash
 python -m venv .venv && source .venv/bin/activate      # Windows: .venv\Scripts\activate
 python -m pip install -r requirements-dev.txt
-python -m pytest -q                                     # ~80 Tests, ~15 s, ohne Soundkarte/Bildschirm
+python -m pytest -q                                     # ~90 Tests, ~30 s, ohne Soundkarte/Bildschirm
 python -m launchpad_pro_tab --smoke-test                # Exit-Code 0 = OK
 python -m launchpad_pro_tab                             # App starten (--no-audio, --fullscreen, --project, --no-update-check)
 ```
@@ -87,6 +150,9 @@ apt-get install -y libegl1 libgl1 libgl1-mesa-dri libxkbcommon0 libxkbcommon-x11
 - Echte Screenshots mit GPU-Effekten: **Xvfb + Mesa llvmpipe**:
   `xvfb-run -a -s "-screen 0 1920x1080x24" python tools/make_screenshots.py` → `docs/images/*.png`
   (dunkel + hell, Update-Dialog mit simuliertem Release). Danach die Bilder mit dem Read-Tool ansehen!
+  **Unter Windows** genügt `python tools/make_screenshots.py` – öffnet ~1 min ein echtes Fenster (GPU,
+  daher mit Leuchten/Cover-Masken); die Systemlautstärke wird dabei immer simuliert (keine
+  Gerätenamen in den Bildern, echte Lautstärke bleibt unberührt).
 - Programmordner: `pyinstaller packaging/launchpad_pro_tab.spec --noconfirm` → `dist/LaunchpadProTAB/`.
   Linux-Paket: `python tools/build_linux_package.py` + Test `sh tools/test_linux_package.sh <tar.gz>`
   (als **normaler Benutzer**, root installiert nach /opt; im Container z. B. `useradd -m theater`, `su theater -c …`).
@@ -118,7 +184,7 @@ launchpad_pro_tab/
   app.py              main(): Einzelinstanz, Windows-Mutex, --purge-user-data, --finish-update, --wait-pid;
                       create_app() (für App, Tests, Screenshots), smoke_test(), Logging
   core/               KEIN Qt! constants, models (ProjectData/TileData/EditParams), project (Dateisystem),
-                      settings (AppSettings JSON inkl. theme/update_*), paths (config/cache/projects; Env-
+                      settings (AppSettings JSON inkl. theme/fullscreen/update_*), paths (config/cache/projects; Env-
                       Overrides LPTAB_CONFIG_DIR/LPTAB_PROJECTS_DIR/LPTAB_CACHE_DIR), purge, util
     purge.py          „Alle Projekte und Einstellungen löschen“: nur Ordner mit gültiger projekt.lptab,
                       nur eigene Einträge (projekt.lptab, audio, cover, .autosave, .cache), geschützte Orte
@@ -127,7 +193,7 @@ launchpad_pro_tab/
                       sonst PyAV/FFmpeg; soxr-Resampling; to_stereo (5.1-Downmix)
     cache.py          PCM-Cache im Projekt-.cache: <key>.pcm (int16 stereo), <key>.peaks.npy, <key>.json
     dsp.py            Peaks (min/max/rms je 256 Frames), aggregate_peaks, soft_limit, Kantenblenden
-    timestretch.py    WsolaStretcher (streaming, Tempo live änderbar, bit-genau bei 1.0), stretch()
+    timestretch.py    TimeStretcher (Phase-Vocoder, streaming, Tempo live änderbar, exakt bei 1.0), stretch()
     engine.py         AudioEngine: Mixer im PortAudio-Callback, Befehls-deque, Snapshots, Limiter,
                       Pegel, Vorschau-Stimme (_PreviewVoice), Prefetch-Thread
     output.py         SoundDeviceBackend (WASAPI bevorzugt), NullBackend, Geräteliste
@@ -141,23 +207,32 @@ launchpad_pro_tab/
     install.py        InstallKind (Windows-Installer/portabel, Linux-Paket, Quellcode), Installer-Argumente,
                       Linux: extract_bundle (tar filter="data"), swap_directories, finish_linux_update, pkexec
   system/volume.py    SystemVolume-Protokoll + Windows(pycaw)/Pulse/WirePlumber/ALSA/macOS/Dummy
-  system/integration.py  Windows: Named Mutex (für AppMutex des Installers), AppUserModelID
+  system/integration.py  Windows: Named Mutex (für AppMutex des Installers), AppUserModelID,
+                      disable_press_and_hold (Fenster-Eigenschaft MicrosoftTabletPenServiceProperty)
   bridge/             Qt-Brücke
-    backend.py        Backend (QML: `backend`) – Projekte, Kacheln, DnD, Autosave, Tick (30 Hz),
-                      Theme (themeMode/darkTheme/setThemeMode/toggleTheme), prepare_for_update()
+    backend.py        Backend (QML: `backend`) – Registerkarten (tabs/activeTab/activateTab/newTab/
+                      closeTab/restore_tabs), Projekte, Kacheln der AKTIVEN Karte, DnD, moveTile,
+                      Autosave aller Karten, Tick (30 Hz), Theme, prepare_for_update()
+    tabs.py           ProjectTab (Projekt + pcm/tokens/runtime/dirty je Karte, engine_key) und
+                      TabsModel (QML: backend.tabs – title/path/dirty/playing/active)
     appearance.py     Farbschema an Qt melden (QStyleHints.setColorScheme → Windows-Titelleiste)
+    touch.py          SyntheticRightClickFilter: verwirft System-Rechtsklicks von Finger/Stift
+                      (Event-Filter am Fenster, installiert in app._prepare_touch_input)
     updater.py        UpdateController (QML: `updater`) – prüfen, Dialogzustand, Download, Installation
     single_instance.py  QLocalServer/QLocalSocket, Name je Benutzer
     editor.py         EditorController (QML: `editor`) – Bearbeiten & Schneiden
     volume.py         MasterVolumeController (QML: `master`) – eigener Thread
-    models.py         TileModel, RecentAudioModel, RecentProjectsModel (QAbstractListModel)
+    models.py         TileModel (zeigt die aktive Karte; runtime-dict wird mit ProjectTab geteilt),
+                      RecentAudioModel, RecentProjectsModel (Rollen current/open)
     waveform.py       WaveformView (QQuickPaintedItem, `import LaunchpadPro`, Property `dark`)
     covers.py         Cover importieren (ICO: größtes Bild, max. 1024 px)
     tasks.py          TaskRunner: ProcessPool(spawn) + ThreadPool, Ergebnisse per Signal in UI-Thread;
                       BrokenProcessPool -> Thread; stop_processes() vor Updates (keine Dateisperren)
     qtutil.py         rprop()/PropertyObject._set(), to_local_path()
   qml/                Main.qml + Komponenten (flach), Theme.qml (Singleton via qmldir, Farben für
-                      BEIDE Modi), SettingsDialog (Reiter), UpdateDialog, ThemePreview, icons/*.svg
+                      BEIDE Modi), UiState.qml (Singleton: modalCount/modalOpen), TabStrip (Karten),
+                      ProjectRow (Zeile „zuletzt geöffnet“: Projektauswahl + Startseite), DragProxy
+                      (kind "file" | "tile"), SettingsDialog (Reiter), UpdateDialog, ThemePreview, icons/*.svg
 packaging/
   launchpad_pro_tab.spec   PyInstaller (Windows + Linux), Laufzeit-Hook pyi_rth_portaudio.py
   windows/LaunchpadProTAB.iss  Inno Setup 7 (+ wizard-large.png/wizard-small.png aus tools/make_installer_images.py)
@@ -166,22 +241,34 @@ tools/                make_screenshots.py, make_installer_screenshots.py, demo_a
                       make_icon.py, make_installer_images.py, build_installer.py, build_linux_package.py,
                       test_windows_installer.ps1, test_linux_package.sh, release_notes.py
 tests/                test_models, test_project, test_audio, test_settings_volume, test_ui (Touch/Maus,
-                      Theme, Update-Dialog), test_update (lokaler Fake-GitHub-Server), test_purge,
-                      test_single_instance
+                      Theme, Update-Dialog, Registerkarten, Projektauswahl, Kacheln ziehen,
+                      Durchklick-Schutz, Fader-Farben), test_update (lokaler Fake-GitHub-Server),
+                      test_purge, test_single_instance
 .github/workflows/    build.yml (wiederverwendbar), ci.yml (jeder Push), release.yml (Tag v*)
 ```
 
 ### Datenfluss Kachel antippen
 
-`Tile.qml` (TapHandler) → `backend.triggerTile(i)` → `engine.toggle(key, pcm, loop)` (deque) →
-Audio-Callback entscheidet atomar Start/Stopp → `engine.snapshot` → `Backend._tick()` (30 Hz)
-→ `TileModel.refresh()` → QML zeigt Leuchten/Restzeit.
+`Tile.qml` (TapHandler) → `backend.triggerTile(i)` (aktive Karte) → `engine.toggle((uid, r, c), pcm, loop)`
+(deque) → Audio-Callback entscheidet atomar Start/Stopp → `engine.snapshot` → `Backend._tick()` (30 Hz)
+aktualisiert die Laufzeitdaten ALLER Karten, `TileModel.refresh()` nur für die sichtbare → QML zeigt
+Leuchten/Restzeit, TabStrip zeigt ▶ + Anzahl je Karte.
+
+### Datenfluss Kachel verschieben
+
+`Tile.qml` (DragHandler, nicht im Show-Modus) → `DragProxy.beginTile()` (Drag.keys
+`application/x-lptab-tile`) → DropArea der Zielkachel → `backend.moveTile(von, nach)` →
+`ProjectData.swap` + pcm/runtime tauschen + `engine.rekey({alt: neu})` + `editor.move_key()`.
+Hat der Maus-Klick die Kachel gestartet (`triggerTile` → True), ruft der Beginn des Ziehens
+`backend.stopTile(i)`. Dieselbe Karte, abgelegt auf *Bearbeiten & Schneiden* → DropArea in
+`EditorSection.qml` → `backend.editTile(i)` → `editor.open_tile(key)`.
 
 ### Datenfluss Belegen
 
 `assignAudio` → Thread: `Project.import_audio` (Kopie) → Prozess: `tasks.prepare` (Dekodieren →
-Cache) → UI-Thread: `open_pcm` (memmap) + Kopf vorladen → Kachel bereit. Tokens (`_tokens[key]`)
-verwerfen veraltete Ergebnisse.
+Cache) → UI-Thread: `open_pcm` (memmap) + Kopf vorladen → Kachel bereit. `Backend._current(tab,
+project, key, token)` verwirft veraltete Ergebnisse (Karte geschlossen, Projekt ersetzt, neuer Auftrag) –
+Ergebnisse für Hintergrund-Karten werden normal übernommen.
 
 ### Datenfluss Update
 
@@ -202,6 +289,15 @@ räumt `updater.cleanup()` Downloads und `.alt-*`-Ordner weg; `Backend._announce
 
 ## 4. Invarianten & Regeln (nicht brechen!)
 
+- **Engine-Schlüssel der Kacheln sind `(tab.uid, row, col)`** (`ProjectTab.engine_key`,
+  `Backend.engine_key(index)`), nie mehr `(row, col)` – sonst kollidieren Karten. `engine.stop_group(uid)`
+  blendet eine Karte aus. Kachel-Slots aus QML gelten immer für die **aktive** Karte; asynchrone
+  Ergebnisse tragen ihre Karte + ihr Projekt mit (`_current(...)` prüfen, `_refresh(tab, …)` zeigt nur
+  die sichtbare Karte an). `apply_edit(project, …)` bekommt das Projekt, in dem bearbeitet wurde.
+- Das `runtime`-dict einer Karte ist dasselbe Objekt wie im `TileModel` → nur leeren (`clear()`),
+  nie neu zuweisen.
+- **TapHandler in Pop-ups/Dialogen immer mit `gesturePolicy: TapHandler.ReleaseWithinBounds`**
+  (siehe Stolperfallen), neue modale Pop-ups zählen `UiState.modalCount` (siehe AppDialog).
 - **Projektdaten (`ProjectData`) nur im UI-Thread lesen/schreiben.** Hintergrund-Threads bekommen
   fertige Werte (siehe `Backend._schedule_cleanup`, `export_zip(save_first=False)`).
 - **Audio-Callback darf nie blockieren oder werfen**: keine Locks, keine Datei-I/O, keine
@@ -248,7 +344,61 @@ räumt `updater.cleanup()` Downloads und `.alt-*`-Ordner weg; `Backend._announce
   anderer Distributionen. Test: System-`libportaudio.so.2` wegschieben, Paket starten.
 - MultiEffect-„Leuchten“: `shadowEnabled` auf eine unsichtbare Quell-Rechteckfläche wirkt deutlich
   besser als `blurEnabled`.
-- Offscreen-Plattform im Test: Bildschirm nur 800×800 → Layout eng, aber funktionsfähig.
+- Offscreen-Plattform im Test: Bildschirm nur 800×800 → kleiner als die Mindestgröße des Fensters;
+  Meldungen werden dann so hoch, dass sie Kacheln überdecken. `tests/test_ui.py` stellt das Fenster
+  deshalb auf 1440×900 (`visibility` Windowed + setWidth/setHeight).
+- **Qt 6.11: Mausklick auf einen `TapHandler` mit Standard-`gesturePolicy` (DragThreshold) in einem
+  modalen Pop-up erreicht zusätzlich die Pointer-Handler HINTER dem Pop-up** (Kachel startete beim
+  Klick auf einen Farbkreis im Kachel-Menü). Eine MouseArea im Dialog-Hintergrund hilft NICHT.
+  Abhilfe: TapHandler in Pop-ups mit `ReleaseWithinBounds` (exklusiver Grab); zusätzlich ignorieren
+  Kacheln Eingaben, solange `UiState.modalOpen`. Klicks auf leere Dialogflächen, den abgedunkelten
+  Hintergrund, Touch, Stift, Hover, Mausrad und Datei-Drops blockt Qt korrekt (getestet).
+- **Windows: „Gedrückt halten“ mit Finger/Stift erzeugt beim Loslassen einen Rechtsklick** an der
+  Fingerposition (Qt reicht ihn als Maus-Rechtsklick mit `source != NotSynthesized` weiter). Er lag
+  neben dem gerade per langem Drücken geöffneten Kachel-Menü → `CloseOnPressOutside` schloss es
+  sofort wieder. Offscreen nicht sichtbar (reine Touch-Ereignisse schließen nichts). Abhilfe doppelt:
+  `integration.disable_press_and_hold()` schaltet es fürs Fenster ab (auch den Windows-Ring), und
+  `bridge/touch.py` filtert solche Rechtsklicks auf allen Systemen (Test:
+  `test_long_press_menu_survives_system_right_click`).
+- **`TapHandler.acceptedButtons` filtert Touch nicht** (ein Finger hat keine Maustaste): Der
+  Mittelklick-Handler der Registerkarten (`acceptedButtons: Qt.MiddleButton`) schloss bei *jedem*
+  Antippen am Touchmonitor das Projekt. Handler, die nur für eine bestimmte Maustaste gedacht sind,
+  brauchen `acceptedDevices: PointerDevice.Mouse` (Test: `test_tabs_by_touch`).
+- Items ohne Eingabe (Rectangle/Text, z. B. Meldungen) lassen Klicks an die Kacheln darunter durch →
+  `MouseArea { acceptedButtons: Qt.AllButtons; hoverEnabled: true }` hineinlegen (blockt auch Handler).
+- QML-Funktionen (z. B. `openFor`) aus Python per `QMetaObject.invokeMethod(obj, "openFor",
+  Q_ARG("QVariant", i))` aufrufen, nicht als Attribut.
+- Nach einem Kartenwechsel (Modell-Reset) sind die Kachelpositionen erst nach einem Durchlauf der
+  Ereignisschleife gültig (Grid-Polish) – in Skripten/Tests vor `mapToScene` kurz `processEvents`.
+- Ein Modell-Reset zerstört die Kachel-Delegates – auch die gerade gezogene samt DragHandler; dann
+  käme nie `finish()` und die Drag-Miniatur bliebe hängen. Daher: DragProxy bricht bei
+  `backend.tabsChanged` ab, Tile setzt in `Component.onDestruction` `dragging = false`.
+- **Deadlock in Skripten mit echtem Fenster (Windows, threaded Render-Loop):** `QTest.mouseRelease`
+  u. ä. behalten die Python-Sperre (GIL) und synchronisieren dabei mit dem Render-Thread. Muss der
+  dann ein Python-`QQuickPaintedItem` zeichnen (`WaveformView.paint`, z. B. nach Ablegen einer
+  Kachel im Editor), wartet er ewig auf die GIL → Fenster „Keine Rückmeldung“. Betrifft nur
+  Skripte (`tools/make_screenshots.py`), nicht die App (Ereignisse kommen aus `app.exec()`, GIL
+  frei) und nicht die Tests (offscreen = Basic-Render-Loop). Abhilfe im Skript: solche Ereignisse
+  per `QCoreApplication.postEvent(win, QMouseEvent(...))` einstellen und mit `processEvents`
+  warten. In der App nie `processEvents`/Warteschleifen in Slots aufrufen.
+- **Dauerschleifen in Threads: Schleifenvariablen halten Objekte fest.** `for v in …` im
+  Vorlade-Thread ließ `v` nach der Schleife an die zuletzt gespielte Stimme gebunden → deren memmap
+  blieb offen und Windows sperrte den Projektordner (Projekt löschen scheiterte). Deshalb liegt der
+  Durchgang in `AudioEngine._prefetch_once()` (Test: `test_engine_prefetch_releases_finished_voices`).
+  Offene memmaps findet man mit `gc.get_objects()` + `gc.get_referrers()` und `sys._current_frames()`.
+- **Phase-Vocoder (timestretch.py):** Der harte Schnitt am **Ende** des Bereichs sah für die
+  Transienten-Erkennung wie ein Einsatz aus → Tempo-1-Sperre kurz vor Schluss, der Zeitausgleich
+  hatte keinen Platz mehr, die Länge stimmte um bis zu 40 ms nicht. Daher keine Erkennung, sobald
+  das Fenster über `end` hinausragt. Der **Vorlauf** (Fenster vor dem ersten Ausgabe-Sample) muss
+  mit Tempo 1 laufen, sonst beginnt die Ausgabe verschmiert statt exakt mit dem ersten Sample.
+  Phasen-Resets ohne Tempo-1-Sperre helfen Schlägen kaum (Vorecho −9 … −18 dB, Spitze halbiert).
+  Einsatz-Schwelle **+5 dB**, nicht +3 dB: Bei Rauschen (Gewitter, MP3-Ausklang) steigt zufällig
+  ~1/3 der Frequenzen um 3 dB → Fehlalarme knapp über 35 % (Gewitter 12 statt 2 Einsätze, Klingel
+  0,1 s zu kurz). +6 dB macht Sprache weicher.
+  Neue Qualitätstests immer auch gegen das alte Verfahren laufen lassen: Ein reiner Dur-Dreiklang
+  ist fast periodisch – daran scheitert nicht einmal WSOLA.
+- `tools/demo_assets.py`: MP3 schreiben (LAME in libsndfile) sprengt unter Windows den 1-MB-Stack
+  des Hauptthreads (STATUS_STACK_OVERFLOW 0xC00000FD) → läuft in einem Thread mit 64 MB Stack.
 - Eigene Skripte, die `create_app()` nutzen, brauchen `if __name__ == "__main__":` – sonst starten die
   Worker-Prozesse (spawn) das Skript erneut und der Pool bricht ab.
 - Worker-Aufgaben dürfen nur Qt-freie Module referenzieren (sonst lädt jeder Worker Qt) –
@@ -281,7 +431,9 @@ räumt `updater.cleanup()` Downloads und `.alt-*`-Ordner weg; `Backend._announce
 ## 6. Teststrategie
 
 - `tests/test_audio.py`: Formate (WAV/FLAC/OGG/MP3/AIFF via libsndfile, M4A/Opus via FFmpeg),
-  Resampling, WSOLA (Länge, Tonhöhe, Streaming), Cache, Rendern, Engine (Fade, Loop, Limiter, Vorschau).
+  Resampling, Time-Stretch (exakt bei 1,0×, Länge, Tonhöhe, Streaming, Mehrstimmigkeit ohne Rauigkeit,
+  Transienten ohne Vorecho/gleichmäßiger Rhythmus, Stereobild, Tempo-Regler live), Cache, Rendern,
+  Engine (Fade, Loop, Limiter, Vorschau).
 - `tests/test_project.py`: Anlegen/Öffnen/Speichern, Sicherung bei beschädigter Datei, Import/
   Duplikate, Speichern unter, ZIP-Export/-Import inkl. Zip-Slip-Schutz, Zwischenstand.
 - `tests/test_ui.py`: komplette Oberfläche mit Backend; Belegen, DnD, Cover (PNG/ICO), Abspielen,
@@ -295,6 +447,14 @@ räumt `updater.cleanup()` Downloads und `.alt-*`-Ordner weg; `Backend._announce
 - CI (`build.yml`): Tests Linux+Windows; Windows: EXE + Smoke-Test, Installer bauen und mit
   `tools/test_windows_installer.ps1` **echt installieren, updaten (bei laufendem Programm) und
   deinstallieren (mit Datenlöschung)**; Linux (ubuntu-22.04): Paket bauen + `test_linux_package.sh`.
+- `test_ui.py` (v1.2): Registerkarten (Hintergrund-Wiedergabe, Wechsel, Schließen, leere Karte,
+  Wiederherstellen, per Touch antippen ohne zu schließen), Projekt löschen (offen + spielend,
+  Fremdordner/Benutzerordner abgelehnt, nicht gefunden, Show-Modus, Klickweg mit Rückfrage; mit
+  Ersatz-Papierkorb im Temp-Ordner), Kachel-Menü nach langem Drücken übersteht
+  den System-Rechtsklick, Projektauswahl per Klick, Kacheln tauschen (Backend, echte Maus inkl. Ton-Abbruch,
+  Touch, Show-Modus gesperrt), Kachel in den Editor ziehen (Maus/Touch, dieselbe Kachel, Wechsel mit
+  Hinweis), Durchklick-Schutz (Farbkreis per Maus/Touch, Meldung antippen),
+  Fader-Farben hell/dunkel, Vollbild-Schalter (Klick, F11, Fenstersystem, `--fullscreen` ohne Speichern).
 - Neue Features immer mit Test + Screenshot-Kontrolle.
 
 ## 7. Neue Version veröffentlichen
@@ -328,6 +488,19 @@ und im Workflow per Secret bereitstellen – beseitigt die SmartScreen-Warnung.
   Update bei laufendem Programm inkl. `LPTABREADY`, Worker enden nach hartem Beenden, Neustart,
   Deinstallation mit Datenlöschung); Linux-Paket auf Ubuntu 22.04 grün.
 - Release v1.1.0: noch nicht veröffentlicht – Tag muss der Nutzer setzen (siehe Abschnitt 7).
+- v1.2 (unveröffentlicht, lokal Windows 11, Python 3.13, PySide6 6.11.2): 96 Tests grün (3 Linux-Tests
+  übersprungen), `--smoke-test` grün, README-Bilder unter Windows neu erzeugt (inkl.
+  18_projektauswahl, 19_kachel_verschieben, 20_kachel_bearbeiten, 21_projekt_loeschen,
+  11_einstellungen mit Vollbild-Schalter); Vollbild-Start
+  (Einstellung bzw. `--fullscreen`) im echten Windows-Fenster geprüft. Kachel-in-den-Editor-Ziehen im
+  echten Fenster mit echter Audioausgabe geprüft (Ereignisse über die Ereignisschleife);
+  `QFile.moveToTrash` mit echtem Windows-Papierkorb geprüft (gemappte Datei → `False` ohne Dialog,
+  danach Erfolg). CI/Installer für v1.2 noch nicht gelaufen (kein git im
+  Arbeitsordner).
+- Phase-Vocoder (v1.2, lokal Windows 11): 103 Tests grün, `--smoke-test` grün; neue Time-Stretch-Tests
+  schlagen mit dem alten WSOLA fehl (7 von 13). Gemessen mit synthetischen Signalen, Windows-Sprachausgabe
+  (SAPI „Hedda“) und den Testdateien des Nutzers (Türklingel: Rauigkeit wie im Original statt +6 … +10 dB).
+  Hörprobe durch den Nutzer steht noch aus.
 - Nicht automatisch prüfbar (auf echter Hardware testen!): tatsächliche Ausgabelatenz mit WASAPI,
   Windows-Systemlautstärke per pycaw auf einem Rechner mit Audiogerät, Touch-Bedienung auf einem
   echten Touchscreen, native Datei-Dialoge, UAC-Abfrage beim Update (CI-Runner hat keine UAC),

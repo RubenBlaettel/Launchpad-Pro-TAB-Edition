@@ -5,8 +5,10 @@ import QtQuick.Shapes
 // Eine Launchpad-Kachel.
 //  • Linksklick / kurzes Tippen  -> Start/Stopp (Maus: sofort beim Drücken)
 //  • Rechtsklick / lang drücken   -> Auswahlliste (Belegen, Cover, Farbe, Bearbeiten, Löschen)
+//  • Ziehen auf eine andere Kachel -> Plätze tauschen (ein per Maus gerade gestarteter Ton bricht ab)
+//  • Ziehen auf „Bearbeiten & Schneiden“ -> Kachel dort bearbeiten (EditorSection.qml)
 //  • Drag & Drop: Audiodatei belegt die Kachel, Bild wird Coverbild
-//  • Show-Modus: Touch löst bereits beim Berühren aus, Bearbeiten ist gesperrt
+//  • Show-Modus: Touch löst bereits beim Berühren aus, Bearbeiten/Verschieben ist gesperrt
 Item {
     id: tile
 
@@ -28,18 +30,27 @@ Item {
 
     signal menuRequested(int index)
 
+    property Item dragProxy: null          // schwebende Karte beim Verschieben (DragProxy.qml)
     readonly property bool locked: backend.showMode
     readonly property bool hasCover: coverUrl !== "" && !empty
     readonly property real radius: Math.max(8, Math.min(18, width * 0.09))
     readonly property real lum: 0.2126 * tileColor.r + 0.7152 * tileColor.g + 0.0722 * tileColor.b
     readonly property color ink: (!hasCover && lum > 0.62) ? "#11131A" : "#FFFFFF"
     readonly property real fs: Math.max(11, Math.min(20, width * 0.085))
+    readonly property bool dragSource: dragProxy !== null && dragProxy.dragging && dragProxy.kind === "tile"
+                                       && dragProxy.tileIndex === index
     property string dropHint: ""
     property real lpProgress: 0
+    property bool pressStarted: false      // hat das aktuelle Drücken (Maus) die Kachel gestartet?
+    property bool menuGesture: false       // aktuelles Drücken hat die Auswahlliste geöffnet -> nicht ziehen
 
     function trigger() {
         if (!tile.empty)
-            backend.triggerTile(tile.index)
+            tile.pressStarted = backend.triggerTile(tile.index)
+    }
+    function openMenu() {
+        tile.menuGesture = true
+        tile.menuRequested(tile.index)
     }
 
     // ---------------------------------------------------------------- Leuchten
@@ -74,7 +85,8 @@ Item {
     Item {
         id: pad
         anchors.fill: parent
-        scale: tap.pressed ? 0.955 : 1.0
+        scale: tap.pressed && !UiState.modalOpen ? 0.955 : 1.0
+        opacity: tile.dragSource ? 0.35 : 1.0     // wird gerade verschoben
         Behavior on scale { NumberAnimation { duration: 90; easing.type: Easing.OutCubic } }
 
         // Leere Kachel
@@ -354,6 +366,8 @@ Item {
     }
 
     // ---------------------------------------------------------------- Eingabe
+    // Solange ein Dialog offen ist (UiState.modalOpen), reagiert die Kachel nicht: Qt reicht
+    // Mausklicks auf manche Bedienelemente eines Dialogs sonst bis zur Kachel dahinter durch.
     HoverHandler { id: hover }
 
     TapHandler {
@@ -362,14 +376,18 @@ Item {
         longPressThreshold: 0.5
         onPressedChanged: {
             if (pressed) {
+                tile.pressStarted = false
+                tile.menuGesture = false
+                if (UiState.modalOpen)
+                    return
                 const isMouse = point.device.type === PointerDevice.Mouse
                 if (isMouse) {
                     if (point.pressedButtons & Qt.RightButton) {
-                        if (!tile.locked) tile.menuRequested(tile.index)
+                        if (!tile.locked) tile.openMenu()
                     } else if (!tile.empty) {
                         tile.trigger()                        // Maus: sofort beim Drücken
                     } else if (!tile.locked) {
-                        tile.menuRequested(tile.index)
+                        tile.openMenu()
                     }
                 } else if (tile.locked) {
                     tile.trigger()                            // Show-Modus: sofort beim Berühren
@@ -382,25 +400,58 @@ Item {
             }
         }
         onTapped: (eventPoint, button) => {
-            if (eventPoint.device.type === PointerDevice.Mouse || tile.locked)
+            if (eventPoint.device.type === PointerDevice.Mouse || tile.locked || UiState.modalOpen)
                 return
-            if (tile.empty) tile.menuRequested(tile.index)
+            if (tile.empty) tile.openMenu()
             else tile.trigger()
         }
         onLongPressed: {
-            if (point.device.type === PointerDevice.Mouse || tile.locked)
+            if (point.device.type === PointerDevice.Mouse || tile.locked || UiState.modalOpen)
                 return
             lpAnim.stop()
             tile.lpProgress = 0
-            tile.menuRequested(tile.index)
+            tile.openMenu()
         }
     }
+
+    // Verschieben: Ziehen über die Drag-Schwelle nimmt die Kachel mit (nur belegte Kacheln,
+    // nicht im Show-Modus). Hat der Mausklick die Kachel gerade gestartet, bricht der Ton ab.
+    DragHandler {
+        id: moveDrag
+        target: null
+        acceptedButtons: Qt.LeftButton
+        enabled: !tile.locked && !tile.empty && tile.dragProxy !== null
+        onActiveChanged: {
+            if (active) {
+                if (tile.menuGesture || UiState.modalOpen)
+                    return
+                lpAnim.stop()
+                tile.lpProgress = 0
+                if (tile.pressStarted) {
+                    backend.stopTile(tile.index)
+                    tile.pressStarted = false
+                }
+                tile.dragProxy.beginTile(tile.index, tile.title, tile.tileColor, tile.hasCover ? tile.coverUrl : "",
+                                         centroid.scenePosition)
+            } else if (tile.dragSource) {
+                tile.dragProxy.finish()
+            }
+        }
+        onCentroidChanged: if (active && tile.dragSource) tile.dragProxy.moveTo(centroid.scenePosition)
+    }
+    // Wird die Kachel mitten im Ziehen abgebaut (Modell-Reset), darf die Miniatur nicht hängen bleiben
+    Component.onDestruction: if (tile.dragSource) tile.dragProxy.dragging = false
 
     DropArea {
         anchors.fill: parent
         enabled: !tile.locked
-        keys: ["text/uri-list"]
+        keys: ["text/uri-list", "application/x-lptab-tile"]
+        function isTileDrag(drag) { return !!drag.source && drag.source.kind === "tile" }
         function hintFor(drag) {
+            if (isTileDrag(drag)) {
+                if (drag.source.tileIndex === tile.index) return ""
+                return tile.empty ? "Hierher verschieben" : "Plätze tauschen"
+            }
             let urls = drag.hasUrls ? drag.urls : []
             if (!drag.hasUrls && drag.source && drag.source.filePath)
                 urls = [drag.source.filePath]
@@ -416,9 +467,17 @@ Item {
                 return tile.empty ? "Erst Audio zuweisen" : "Als Coverbild"
             return ""
         }
-        onEntered: (drag) => { tile.dropHint = hintFor(drag); drag.accept(Qt.CopyAction) }
+        onEntered: (drag) => { tile.dropHint = hintFor(drag); drag.accept(isTileDrag(drag) ? Qt.MoveAction : Qt.CopyAction) }
         onExited: tile.dropHint = ""
         onDropped: (drop) => {
+            if (isTileDrag(drop)) {
+                tile.dropHint = ""
+                if (drop.source.tileIndex !== tile.index) {
+                    backend.moveTile(drop.source.tileIndex, tile.index)
+                    drop.accept(Qt.MoveAction)
+                }
+                return
+            }
             let urls = []
             if (drop.hasUrls) urls = drop.urls
             else if (drop.source && drop.source.filePath) urls = [drop.source.filePath]

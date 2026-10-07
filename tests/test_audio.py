@@ -10,7 +10,7 @@ from conftest import SR, dominant_frequency, sine
 from launchpad_pro_tab.audio import cache, dsp, tasks
 from launchpad_pro_tab.audio.decoder import DecodeError, decode, probe
 from launchpad_pro_tab.audio.engine import AudioEngine
-from launchpad_pro_tab.audio.timestretch import WsolaStretcher, stretch
+from launchpad_pro_tab.audio.timestretch import TimeStretcher, stretch
 
 
 # ---------------------------------------------------------------------------
@@ -126,17 +126,44 @@ def test_soft_limit_and_fades():
 # ---------------------------------------------------------------------------
 # Time-Stretch
 # ---------------------------------------------------------------------------
-def test_stretch_is_exact_at_speed_one():
-    x = sine(440, 1.0, SR)
-    st = WsolaStretcher(x, SR)
+def _read_all(st: TimeStretcher, block: int = 777) -> np.ndarray:
     out = []
     while True:
-        chunk, filled = st.read(777)
+        chunk, filled = st.read(block)
         out.append(chunk[:filled])
-        if filled < 777:
-            break
-    y = np.concatenate(out)
-    assert np.max(np.abs(y[: len(x)] - x)) < 1e-5
+        if filled < block:
+            return np.concatenate(out)
+
+
+def _chord(seconds: float) -> tuple[np.ndarray, list[float]]:
+    """Klavierähnlicher Akkord (Bass + Cmaj7, leicht inharmonische Obertöne) – mehrstimmig,
+    hier klang das frühere WSOLA rau/„verzerrt“."""
+    t = np.arange(int(SR * seconds)) / SR
+    freqs = [f0 * h * (1 + 0.0004 * h * h) for f0 in (65.41, 261.63, 329.63, 392.0, 493.88) for h in (1, 2, 3, 4)]
+    x = sum(np.sin(2 * np.pi * f * t + i) / (1 + i % 4) for i, f in enumerate(freqs))
+    x = (0.2 * x / np.max(np.abs(x))).astype(np.float32)
+    return np.stack([x, x], axis=1), freqs
+
+
+def _off_tone_db(y: np.ndarray, freqs: list[float]) -> float:
+    """Anteil der Energie abseits der erwarteten Töne (Rauigkeit, Verzerrung) in dB."""
+    m = y[:, 0].astype(np.float64)
+    spec = np.abs(np.fft.rfft(m * np.blackman(len(m)))) ** 2
+    f = np.fft.rfftfreq(len(m), 1 / SR)
+    near = np.min(np.abs(f[:, None] - np.asarray(freqs)[None, :]), axis=1) < 6.0
+    return float(10 * np.log10(spec[~near].sum() / spec.sum()))
+
+
+def test_stretch_is_exact_at_speed_one():
+    x = sine(440, 1.0, SR)
+    y = _read_all(TimeStretcher(x, SR))
+    assert len(y) == len(x)
+    assert np.max(np.abs(y - x)) < 1e-5
+    # auch für einen Ausschnitt aus int16-Daten (so liegen sie im PCM-Cache)
+    pcm = (x * 32767).astype(np.int16)
+    y = _read_all(TimeStretcher(pcm, SR, start=12345, end=40000))
+    assert len(y) == 40000 - 12345
+    assert np.max(np.abs(y - pcm[12345:40000] / 32768.0)) < 1e-5
 
 
 @pytest.mark.parametrize("speed", [0.5, 0.8, 1.25, 2.0])
@@ -147,15 +174,78 @@ def test_stretch_keeps_pitch_and_changes_length(speed):
     assert abs(dominant_frequency(y, SR) - 440) < 3
 
 
+@pytest.mark.parametrize("speed", [0.5, 0.75, 1.5, 2.0])
+def test_stretch_polyphonic_without_roughness(speed):
+    x, freqs = _chord(3.0)
+    y = stretch(x, SR, 0, len(x), speed)[SR // 2: -SR // 2]
+    assert _off_tone_db(x, freqs) < -80
+    assert _off_tone_db(y, freqs) < -25  # früheres WSOLA: ≈ -9 dB, Phase-Vocoder: -30 … -44 dB
+
+
+def test_stretch_keeps_transients_sharp():
+    """Schläge bleiben einzeln und scharf: kein Vorecho, keine Verdopplung, Spitze und Rhythmus erhalten."""
+    rng = np.random.default_rng(7)
+    x = np.zeros(int(SR * 2.4))
+    k = np.arange(int(0.1 * SR))
+    hits = [0.31, 0.83, 1.42, 1.97]
+    for t0 in hits:
+        i = int(t0 * SR)
+        x[i: i + len(k)] += rng.standard_normal(len(k)) * np.exp(-k / (0.01 * SR))
+    x = (0.5 * x / np.max(np.abs(x))).astype(np.float32)
+    for speed in (0.5, 0.75, 1.5, 2.0):
+        y = stretch(np.stack([x, x], axis=1), SR, 0, len(x), speed)[:, 0]
+        onsets = []
+        for t0 in hits:
+            c = int(t0 / speed * SR)
+            seg = y[c - int(0.1 * SR): c + int(0.15 * SR)].astype(np.float64)
+            a = np.abs(seg)
+            onset = int(np.argmax(a > 0.5 * a.max()))
+            onsets.append(c - int(0.1 * SR) + onset)
+            pre = seg[max(0, onset - int(0.04 * SR)): onset - int(0.0015 * SR)]
+            assert (pre ** 2).sum() < 1e-3 * (seg ** 2).sum()  # Vorecho unter -30 dB
+            original = np.max(np.abs(x[int(t0 * SR): int(t0 * SR) + len(k)]))
+            assert a.max() > 0.8 * original
+            # Schläge sitzen höchstens ein halbes Fenster neben der idealen Stelle …
+            assert abs(onsets[-1] - c) < 0.05 * SR
+        # … aber alle gleich: Der Rhythmus bleibt gleichmäßig
+        ideal = np.diff(hits) / speed * SR
+        assert np.max(np.abs(np.diff(onsets) - ideal)) < 0.008 * SR
+
+
+def test_stretch_preserves_stereo_image():
+    x, _ = _chord(2.0)
+    x[:, 0] = np.roll(x[:, 1], 12)  # links 0,25 ms später -> Schallquelle rechts
+    y = stretch(x, SR, 0, len(x), 0.75)[SR // 2: -SR // 2].astype(np.float64)
+    left, right = y[:, 0], y[:, 1]
+    lags = range(-40, 41)
+    corr = [np.dot(left[40:-40], np.roll(right, lag)[40:-40]) for lag in lags]
+    best = int(np.argmax(corr))
+    assert list(lags)[best] == 12
+    assert corr[best] / np.sqrt(np.dot(left[40:-40], left[40:-40]) * np.dot(right[40:-40], right[40:-40])) > 0.99
+
+
+def test_stretch_live_speed_changes_stay_clean():
+    x = sine(440, 12.0, SR)
+    st = TimeStretcher(x, SR)
+    out = []
+    for i in range(400):  # ≈ 4 s; das Tempo wird wie am Regler laufend verändert
+        st.speed = 1.25 + 0.75 * np.sin(i / 25)
+        chunk, filled = st.read(480)
+        out.append(chunk[:filled])
+    y = np.concatenate(out)[SR // 4:]
+    assert _off_tone_db(y, [440.0]) < -60
+
+
 def test_stretch_streaming_speed_change_and_position():
     x = sine(330, 3.0, SR)
-    st = WsolaStretcher(x, SR, start=SR // 2, end=int(2.5 * SR))
+    st = TimeStretcher(x, SR, start=SR // 2, end=int(2.5 * SR))
     st.speed = 2.0
     st.read(SR // 2)                       # 0,5 s Ausgabe bei 2× = 1 s Eingabe
     assert st.position == pytest.approx(SR * 1.5, abs=0.02 * SR)
     st.speed = 0.5
     st.read(SR // 2)                       # 0,5 s bei 0,5× = 0,25 s Eingabe
-    assert st.position == pytest.approx(SR * 1.75, abs=0.03 * SR)
+    # Der Tempowechsel greift nach zwei Fenstern (≈ 43 ms, so lange läuft noch 2×)
+    assert st.position == pytest.approx(SR * 1.75, abs=0.07 * SR)
     st.seek(SR)
     assert st.position == SR
 
@@ -267,6 +357,53 @@ def test_engine_kill_and_restart():
     eng.kill("x")
     eng.render_offline(SR // 20)
     assert eng.snapshot == {}
+
+
+def test_engine_stop_group_and_rekey():
+    eng = _engine()
+    pcm = _int16(sine(440, 1.0, SR))
+    eng.toggle((1, 0, 0), pcm)             # Registerkarte 1
+    eng.render_offline(1000)
+    eng.toggle((1, 0, 1), pcm)
+    eng.toggle((2, 0, 0), pcm)             # Registerkarte 2
+    eng.render_offline(500)
+    # Tausch (0,0) <-> (0,1) in Karte 1: Stimmen laufen unter dem neuen Schlüssel weiter
+    eng.rekey({(1, 0, 0): (1, 0, 1), (1, 0, 1): (1, 0, 0)})
+    eng.render_offline(500)
+    assert set(eng.snapshot) == {(1, 0, 0), (1, 0, 1), (2, 0, 0)}
+    assert eng.snapshot[(1, 0, 1)][0] == 2000   # die zuerst gestartete Stimme liegt jetzt auf (0,1)
+    assert eng.snapshot[(1, 0, 0)][0] == 1000
+    eng.stop_group(1)                      # Karte 1 schließen -> nur deren Kacheln ausblenden
+    eng.render_offline(SR // 10)
+    assert set(eng.snapshot) == {(2, 0, 0)}
+
+
+def test_engine_prefetch_releases_finished_voices():
+    """Der Vorlade-Thread hält keine beendete Stimme fest – sonst bliebe ihre memmap (und unter
+    Windows der Projektordner) gesperrt, z. B. beim Löschen eines Projekts."""
+    import gc
+    import time
+    import weakref
+
+    eng = AudioEngine()
+    eng.start_null(SR)
+    try:
+        pcm = _int16(sine(440, 2.0, SR))
+        ref = weakref.ref(pcm)
+        eng.toggle("x", pcm, loop=True)
+        end = time.monotonic() + 3
+        while "x" not in eng.snapshot and time.monotonic() < end:
+            time.sleep(0.01)
+        time.sleep(0.5)                    # mehrere Vorlade-Durchgänge mit der laufenden Stimme
+        eng.kill("x")
+        del pcm
+        end = time.monotonic() + 3
+        while ref() is not None and time.monotonic() < end:
+            time.sleep(0.05)
+            gc.collect()
+        assert ref() is None
+    finally:
+        eng.shutdown()
 
 
 def test_engine_preview_play_pause_seek_and_end():

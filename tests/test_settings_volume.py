@@ -18,6 +18,32 @@ def test_settings_roundtrip_and_corruption(tmp_path):
     assert broken.buffer_frames == 0 and broken.recent_projects == []
 
 
+def test_open_tabs_are_remembered(tmp_path):
+    path = tmp_path / "einstellungen.json"
+    old = AppSettings.load(path)
+    old.last_project = "C:/Projekte/Alt"          # Einstellungen einer älteren Version
+    assert old.projects_to_restore() == ["C:/Projekte/Alt"]
+    old.open_projects = ["C:/Projekte/A", "C:/Projekte/B", 42]
+    old.save()
+    again = AppSettings.load(path)
+    assert again.projects_to_restore() == ["C:/Projekte/A", "C:/Projekte/B"]  # Unsinn verworfen
+    again.forget_project("C:/Projekte/A")
+    assert again.projects_to_restore() == ["C:/Projekte/B"]
+    again.open_projects = []                        # alle Karten geschlossen -> nichts öffnen
+    assert again.projects_to_restore() == []
+
+
+def test_fullscreen_is_remembered(tmp_path):
+    path = tmp_path / "einstellungen.json"
+    s = AppSettings.load(path)
+    assert s.fullscreen is False
+    s.fullscreen = True
+    s.save()
+    assert AppSettings.load(path).fullscreen is True
+    path.write_text('{"fullscreen": "ja"}', encoding="utf-8")
+    assert AppSettings.load(path).fullscreen is False   # Unsinn -> kein Vollbild
+
+
 def test_recent_audio_order_dedupe_and_limit(tmp_path):
     s = AppSettings.load(tmp_path / "s.json")
     a, b = tmp_path / "a.wav", tmp_path / "b.wav"

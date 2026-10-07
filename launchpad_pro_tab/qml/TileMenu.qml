@@ -104,6 +104,7 @@ AppDialog {
                     TapHandler {
                         id: aTap
                         enabled: arow.exists
+                        gesturePolicy: TapHandler.ReleaseWithinBounds   // exklusiv: kein Klick an die Kachel dahinter
                         onTapped: backend.assignAudio(menu.tileIndex, arow.path)
                     }
                 }
@@ -199,7 +200,11 @@ AppDialog {
                         border.color: selected ? Theme.swatchRing : Qt.darker(modelData, 1.5)
                         scale: sTap.pressed ? 0.9 : 1
                         Icon { anchors.centerIn: parent; visible: parent.selected; name: "check"; size: 18; color: "#10131A" }
-                        TapHandler { id: sTap; onTapped: backend.setTileColor(menu.tileIndex, modelData) }
+                        TapHandler {
+                            id: sTap
+                            gesturePolicy: TapHandler.ReleaseWithinBounds
+                            onTapped: backend.setTileColor(menu.tileIndex, modelData)
+                        }
                     }
                 }
             }

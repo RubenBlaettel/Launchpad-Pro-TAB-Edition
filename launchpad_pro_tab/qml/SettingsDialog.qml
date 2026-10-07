@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 
-// Einstellungen: Darstellung (Dunkel/Hell/System), Audio, Updates, Info.
+// Einstellungen: Darstellung (Dunkel/Hell/System, Vollbild), Audio, Updates, Info.
 AppDialog {
     id: dlg
     title: "Einstellungen"
@@ -143,7 +143,11 @@ AppDialog {
                                 color: Theme.accent
                             }
                             HoverHandler { id: mHover }
-                            TapHandler { id: mTap; onTapped: backend.setThemeMode(modeCard.modelData.m) }
+                            TapHandler {
+                                id: mTap
+                                gesturePolicy: TapHandler.ReleaseWithinBounds   // exklusiv: kein Klick an die Kachel dahinter
+                                onTapped: backend.setThemeMode(modeCard.modelData.m)
+                            }
                         }
                     }
                 }
@@ -156,6 +160,18 @@ AppDialog {
                     font.family: Theme.fontFamily
                     font.pixelSize: Theme.fontSmall
                     lineHeight: 1.2
+                }
+
+                FieldLabel { text: "Fenster"; Layout.topMargin: 8 }
+                AppSwitch {
+                    objectName: "fullscreenSwitch"
+                    Layout.fillWidth: true
+                    text: "Vollbild"
+                    subText: "Ohne Titel- und Taskleiste – ideal für Touch-Terminal und Vorstellung · Taste F11"
+                    // folgt immer dem Fenster (auch nach F11), deshalb nicht selbst umschalten
+                    checkable: false
+                    checked: backend.fullscreen
+                    onClicked: backend.setFullscreen(!backend.fullscreen)
                 }
             }
 

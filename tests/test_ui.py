@@ -32,6 +32,12 @@ def ctx(qapp, tmp_path_factory):
 
     qInstallMessageHandler(_handler)
     context = create_app([sys.argv[0]], no_audio=True, use_processes=True)
+    # Offscreen-Bildschirm ist nur 800×800 (kleiner als die Mindestgröße des Fensters):
+    # auf eine realistische Größe bringen, sonst überdecken Meldungen die halbe Kachelfläche.
+    win = context.window
+    win.setProperty("visibility", 2)  # Window.Windowed
+    win.setWidth(1440)
+    win.setHeight(900)
     yield context
     context.dispose()
     qapp.processEvents()
@@ -97,11 +103,11 @@ def test_full_workflow(ctx, tmp_path, wav_file):
 
     # --- Abspielen (Start/Stopp) --------------------------------------------
     backend.triggerTile(0)
-    assert wait_until(app, lambda: (0, 0) in engine.snapshot and backend.activeCount == 1)
+    assert wait_until(app, lambda: backend.engine_key(0) in engine.snapshot and backend.activeCount == 1)
     backend.triggerTile(0)
-    assert wait_until(app, lambda: (0, 0) not in engine.snapshot and backend.activeCount == 0)
+    assert wait_until(app, lambda: backend.engine_key(0) not in engine.snapshot and backend.activeCount == 0)
     backend.triggerTile(2)  # Schleife
-    assert wait_until(app, lambda: (0, 2) in engine.snapshot)
+    assert wait_until(app, lambda: backend.engine_key(2) in engine.snapshot)
     backend.stopAll()
     assert wait_until(app, lambda: engine.snapshot == {})
 
@@ -210,9 +216,9 @@ def test_mouse_and_touch_interaction(ctx, tmp_path, wav_file):
 
     # Linksklick: startet sofort, zweiter Klick stoppt
     QTest.mouseClick(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, pos)
-    assert wait_until(app, lambda: (0, 0) in engine.snapshot, 3)
+    assert wait_until(app, lambda: backend.engine_key(0) in engine.snapshot, 3)
     QTest.mouseClick(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, pos)
-    assert wait_until(app, lambda: (0, 0) not in engine.snapshot, 3)
+    assert wait_until(app, lambda: backend.engine_key(0) not in engine.snapshot, 3)
 
     # Rechtsklick: Auswahlliste öffnet sich
     QTest.mouseClick(win, Qt.MouseButton.RightButton, Qt.KeyboardModifier.NoModifier, pos)
@@ -220,14 +226,14 @@ def test_mouse_and_touch_interaction(ctx, tmp_path, wav_file):
     assert menu.property("tileIndex") == 0
     menu.close()
     assert wait_until(app, lambda: not menu.property("visible"), 3)
-    assert (0, 0) not in engine.snapshot  # Rechtsklick spielt nicht ab
+    assert backend.engine_key(0) not in engine.snapshot  # Rechtsklick spielt nicht ab
 
     # Touch: kurzes Tippen spielt ab
     touch = QTest.createTouchDevice()
     QTest.touchEvent(win, touch).press(0, pos, win).commit()
     wait_until(app, lambda: False, 0.08)
     QTest.touchEvent(win, touch).release(0, pos, win).commit()
-    assert wait_until(app, lambda: (0, 0) in engine.snapshot, 3)
+    assert wait_until(app, lambda: backend.engine_key(0) in engine.snapshot, 3)
     backend.stopAll()
     assert wait_until(app, lambda: engine.snapshot == {}, 3)
 
@@ -236,7 +242,7 @@ def test_mouse_and_touch_interaction(ctx, tmp_path, wav_file):
     assert wait_until(app, lambda: menu.property("opened"), 3)
     QTest.touchEvent(win, touch).release(0, pos, win).commit()
     wait_until(app, lambda: False, 0.2)
-    assert (0, 0) not in engine.snapshot
+    assert backend.engine_key(0) not in engine.snapshot
     menu.close()
     assert wait_until(app, lambda: not menu.property("visible"), 3)
 
@@ -252,13 +258,55 @@ def test_mouse_and_touch_interaction(ctx, tmp_path, wav_file):
     # Show-Modus: Berühren löst sofort aus (noch vor dem Loslassen), kein Menü
     backend.setShowMode(True)
     QTest.touchEvent(win, touch).press(0, pos, win).commit()
-    assert wait_until(app, lambda: (0, 0) in engine.snapshot, 3)
+    assert wait_until(app, lambda: backend.engine_key(0) in engine.snapshot, 3)
     wait_until(app, lambda: False, 0.8)
     assert not menu.property("opened")
     QTest.touchEvent(win, touch).release(0, pos, win).commit()
     backend.setShowMode(False)
     backend.stopAll()
     assert wait_until(app, lambda: engine.snapshot == {}, 3)
+    assert QML_ERRORS == []
+
+
+def test_long_press_menu_survives_system_right_click(ctx, tmp_path, wav_file):
+    """Windows macht aus „Gedrückt halten“ beim Loslassen einen Rechtsklick an der Fingerposition –
+    das per langem Drücken geöffnete Kachel-Menü darf davon nicht wieder zugehen."""
+    from PySide6.QtCore import QEvent, QObject, QPointF, Qt
+    from PySide6.QtGui import QMouseEvent
+    from PySide6.QtTest import QTest
+
+    from launchpad_pro_tab.system import integration
+
+    app, backend, win = ctx.app, ctx.backend, ctx.window
+    menu = win.findChild(QObject, "tileMenu")
+    assert backend.newProject("Gedrückt halten", str(tmp_path / "projekte"), 4)
+    backend.assignAudio(15, str(wav_file("halten.wav", 1.0)))
+    assert wait_until(app, lambda: not backend.tileInfo(15)["empty"] and not backend.runner.pending)
+    wait_until(app, lambda: False, 0.3)
+    pos = _tile_center(win, 15)                         # rechts unten – liegt neben dem Menü
+    touch = QTest.createTouchDevice()
+
+    def right_click(source, *device):
+        for typ, buttons in ((QEvent.Type.MouseButtonPress, Qt.MouseButton.RightButton),
+                             (QEvent.Type.MouseButtonRelease, Qt.MouseButton.NoButton)):
+            app.sendEvent(win, QMouseEvent(typ, QPointF(pos), QPointF(pos), QPointF(win.mapToGlobal(pos)),
+                                           Qt.MouseButton.RightButton, buttons, Qt.KeyboardModifier.NoModifier,
+                                           source, *device))
+        wait_until(app, lambda: False, 0.3)
+
+    QTest.touchEvent(win, touch).press(0, pos, win).commit()
+    assert wait_until(app, lambda: menu.property("opened"), 3)
+    wait_until(app, lambda: False, 1.0)                 # Finger bleibt noch liegen
+    QTest.touchEvent(win, touch).release(0, pos, win).commit()
+    right_click(Qt.MouseEventSource.MouseEventSynthesizedBySystem)            # wie Windows
+    right_click(Qt.MouseEventSource.MouseEventNotSynthesized, touch)          # vom Touch-Gerät
+    assert menu.property("visible") and menu.property("tileIndex") == 15
+
+    # Ein echter Rechtsklick mit der Maus neben das Menü schließt es weiterhin
+    QTest.mouseClick(win, Qt.MouseButton.RightButton, Qt.KeyboardModifier.NoModifier, pos)
+    assert wait_until(app, lambda: not menu.property("visible"), 3)
+    assert backend.engine_key(15) not in backend.engine.snapshot
+    assert integration.disable_press_and_hold(0) is False  # ohne Fenster: nichts zu tun
     assert QML_ERRORS == []
 
 
@@ -350,4 +398,538 @@ def test_update_notice_and_dialog(ctx):
     updater.skipVersion()
     wait_until(app, lambda: False, 0.2)
     assert not updater.available and not pill.isVisible()
+    assert QML_ERRORS == []
+
+
+# ---------------------------------------------------------------------------
+# Registerkarten, Projektauswahl, Kacheln verschieben, Durchklick-Schutz
+# ---------------------------------------------------------------------------
+def _role(model, row: int, name: str):
+    roles = {bytes(v).decode(): k for k, v in model.roleNames().items()}
+    return model.data(model.index(row, 0), roles[name])
+
+
+def _items(root, cls_prefix: str, out=None):
+    """Alle sichtbaren Items, deren QML-Typ mit ``cls_prefix`` beginnt (inkl. Pop-up-Inhalte)."""
+    out = [] if out is None else out
+    if root.metaObject().className().startswith(cls_prefix) and root.isVisible():
+        out.append(root)
+    for child in root.childItems():
+        _items(child, cls_prefix, out)
+    return out
+
+
+def _center_of(item):
+    from PySide6.QtCore import QPoint, QPointF
+
+    p = item.mapToScene(QPointF(item.width() / 2, item.height() / 2))
+    return QPoint(int(p.x()), int(p.y()))
+
+
+def _tile_under(win, pt, count: int):
+    from PySide6.QtCore import QPointF
+
+    for i in range(count):
+        item = _find_item(win.contentItem(), f"tile_{i}")
+        p0 = item.mapToScene(QPointF(0, 0))
+        if p0.x() <= pt.x() <= p0.x() + item.width() and p0.y() <= pt.y() <= p0.y() + item.height():
+            return i
+    return None
+
+
+def _glide(app, move, start, end, steps: int = 24):
+    """Zeiger/Finger in kleinen Schritten von ``start`` nach ``end`` bewegen."""
+    from PySide6.QtCore import QPoint
+
+    for i in range(1, steps + 1):
+        move(QPoint(start.x() + (end.x() - start.x()) * i // steps, start.y() + (end.y() - start.y()) * i // steps))
+        wait_until(app, lambda: False, 0.012)
+
+
+def test_project_tabs(ctx, tmp_path, wav_file):
+    from launchpad_pro_tab.core.project import Project
+
+    app, backend, settings = ctx.app, ctx.backend, ctx.settings
+    engine, tabs = backend.engine, backend.tabs
+    root = tmp_path / "projekte"
+    assert backend.newProject("Tab A", str(root), 4)
+    path_a, index_a = backend.projectPath, backend.activeTab
+    backend.assignAudio(0, str(wav_file("a.wav", 3.0)))
+    assert wait_until(app, lambda: not backend.tileInfo(0)["empty"] and not backend.runner.pending)
+    backend.setTileLoop(0, True)
+    count = tabs.rowCount()
+
+    # Neues Projekt öffnet sich in einer eigenen Registerkarte
+    assert backend.newProject("Tab B", str(root), 3)
+    assert tabs.rowCount() == count + 1 and backend.activeTab == index_a + 1
+    assert backend.projectName == "Tab B" and backend.gridSize == 3 and backend.tiles.rowCount() == 9
+
+    # Kachel in A läuft weiter, während B sichtbar ist (wie ein Browser-Tab)
+    backend.activateTab(index_a)
+    assert backend.projectName == "Tab A" and backend.gridSize == 4
+    backend.triggerTile(0)
+    key_a = backend.engine_key(0)
+    assert wait_until(app, lambda: key_a in engine.snapshot, 3)
+    backend.activateTab(index_a + 1)
+    wait_until(app, lambda: False, 0.3)
+    assert key_a in engine.snapshot and backend.activeCount == 1
+    assert _role(tabs, index_a, "playing") == 1 and not _role(tabs, index_a, "active")
+
+    # Schon offenes Projekt öffnen -> nur zu seiner Karte wechseln
+    assert backend.openProject(path_a)
+    assert backend.activeTab == index_a and tabs.rowCount() == count + 1
+    recent = backend.recentProjects
+    rows = {_role(recent, i, "name"): i for i in range(recent.rowCount())}
+    assert _role(recent, rows["Tab A"], "current") and _role(recent, rows["Tab A"], "open")
+    assert _role(recent, rows["Tab B"], "open") and not _role(recent, rows["Tab B"], "current")
+    assert path_a in settings.open_projects and settings.last_project == path_a
+
+    # Karte schließen: speichert, blendet ihre Kacheln aus
+    backend.closeTab(index_a)
+    assert wait_until(app, lambda: key_a not in engine.snapshot, 3)
+    assert tabs.rowCount() == count and path_a not in settings.open_projects
+    assert Project.open(path_a).data.peek(0, 0).loop
+
+    # Leere Karte (Startseite) – es gibt höchstens eine
+    backend.newTab()
+    assert not backend.hasProject and backend.tiles.rowCount() == 0
+    n = tabs.rowCount()
+    backend.newTab()
+    assert tabs.rowCount() == n
+
+    # Alle Karten schließen -> eine leere bleibt
+    for _ in range(20):
+        if tabs.rowCount() == 1 and not backend.hasProject:
+            break
+        backend.closeTab(0)
+    assert tabs.rowCount() == 1 and not backend.hasProject and settings.open_projects == []
+
+    # Beim nächsten Start werden die Karten wiederhergestellt
+    path_b = str((root / "Tab B").resolve())
+    settings.open_projects = [path_a, path_b]
+    settings.last_project = path_a
+    backend.restore_tabs()
+    assert tabs.rowCount() == 2 and backend.projectPath == path_a
+    assert [_role(tabs, i, "title") for i in range(2)] == ["Tab A", "Tab B"]
+    assert QML_ERRORS == []
+
+
+def test_tabs_by_touch(ctx, tmp_path):
+    """Touchmonitor: Antippen einer Karte holt sie nach vorne – schließen nur über das X."""
+    from PySide6.QtCore import QPoint, QPointF, Qt
+    from PySide6.QtTest import QTest
+
+    app, backend, win = ctx.app, ctx.backend, ctx.window
+    tabs = backend.tabs
+    assert backend.newProject("Touch A", str(tmp_path), 3)
+    a = backend.activeTab
+    assert backend.newProject("Touch B", str(tmp_path), 3)
+    b = backend.activeTab
+    count = tabs.rowCount()
+    touch = QTest.createTouchDevice()
+
+    def tap(pt):
+        QTest.touchEvent(win, touch).press(0, pt, win).commit()
+        wait_until(app, lambda: False, 0.05)
+        QTest.touchEvent(win, touch).release(0, pt, win).commit()
+        wait_until(app, lambda: False, 0.3)
+
+    def spots():
+        tab = _find_item(win.contentItem(), f"tab_{a}")
+        close = _find_item(win.contentItem(), f"closeTab_{a}")
+        p0 = tab.mapToScene(QPointF(0, 0))
+        x0 = close.mapToScene(QPointF(0, 0)).x()
+        y = int(p0.y() + tab.height() / 2)
+        return {"Titel": QPoint(int(p0.x() + 40), y), "Mitte": _center_of(tab), "neben dem X": QPoint(int(x0 - 6), y)}
+
+    for name in spots():
+        backend.activateTab(b)
+        wait_until(app, lambda: False, 0.3)
+        tap(spots()[name])
+        assert tabs.rowCount() == count, f"Antippen „{name}“ hat die Karte geschlossen"
+        assert backend.activeTab == a and backend.projectName == "Touch A", name
+
+    # Das X schließt weiterhin – per Touch und die mittlere Maustaste wie im Browser
+    tap(_center_of(_find_item(win.contentItem(), f"closeTab_{a}")))
+    assert tabs.rowCount() == count - 1 and backend.projectName != "Touch A"
+    b = next(i for i in range(tabs.rowCount()) if _role(tabs, i, "title") == "Touch B")
+    wait_until(app, lambda: False, 0.3)
+    QTest.mouseClick(win, Qt.MouseButton.MiddleButton, Qt.KeyboardModifier.NoModifier,
+                     _center_of(_find_item(win.contentItem(), f"tab_{b}")))
+    wait_until(app, lambda: False, 0.3)                   # (zuletzt bleibt eine leere Karte)
+    assert all(_role(tabs, i, "title") != "Touch B" for i in range(tabs.rowCount()))
+    assert QML_ERRORS == []
+
+
+def test_project_picker(ctx, tmp_path):
+    from PySide6.QtCore import QObject, Qt
+    from PySide6.QtTest import QTest
+
+    app, backend, win = ctx.app, ctx.backend, ctx.window
+    assert backend.newProject("Auswahl 1", str(tmp_path), 3)
+    first = backend.projectPath
+    assert backend.newProject("Auswahl 2", str(tmp_path), 3)
+    picker = win.findChild(QObject, "projectPicker")
+    QTest.mouseClick(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, _center(win, "projectField"))
+    assert wait_until(app, lambda: picker.property("opened"), 3)
+    rows = [r for r in _items(win.contentItem(), "ProjectRow") if r.property("path") == first]
+    assert rows and rows[0].property("open") and not rows[0].property("current")
+    QTest.mouseClick(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, _center_of(rows[0]))
+    assert wait_until(app, lambda: backend.projectPath == first and not picker.property("visible"), 3)
+    assert QML_ERRORS == []
+
+
+def test_delete_project(ctx, tmp_path, wav_file):
+    """Projektauswahl: Papierkorb mit Rückfrage; offene Projekte werden vorher geschlossen."""
+    import shutil
+
+    from PySide6.QtCore import QObject, Qt
+    from PySide6.QtTest import QTest
+
+    app, backend, win, settings = ctx.app, ctx.backend, ctx.window, ctx.settings
+    engine = backend.engine
+    trash = tmp_path / "Papierkorb"
+    trash.mkdir()
+    trashed: list[str] = []
+
+    def fake_trash(path):
+        # wie der echte Papierkorb: scheitert (Windows), solange Dateien darin gemappt/geöffnet sind
+        try:
+            shutil.move(str(path), str(trash / path.name))
+        except OSError:
+            return False
+        trashed.append(path.name)
+        return True
+
+    real_trash, backend.move_to_trash = backend.move_to_trash, fake_trash
+    try:
+        root = tmp_path / "projekte"
+        assert backend.newProject("Weg damit", str(root), 3)
+        path_a = backend.projectPath
+        backend.assignAudio(0, str(wav_file("a.wav", 3.0)))
+        assert wait_until(app, lambda: not backend.tileInfo(0)["empty"] and not backend.runner.pending)
+        backend.setTileLoop(0, True)
+        backend.triggerTile(0)
+        key_a = backend.engine_key(0)
+        assert wait_until(app, lambda: key_a in engine.snapshot, 3)
+        backend.editTile(0)
+        assert wait_until(app, lambda: backend.editor.active)
+        assert backend.newProject("Bleibt", str(root), 3)
+        path_b = backend.projectPath
+        tabs = backend.tabs.rowCount()
+
+        # Offenes, spielendes Projekt (Hintergrund-Karte, geparkte Bearbeitung) löschen
+        assert backend.deleteProject(path_a)
+        assert wait_until(app, lambda: not Path(path_a).exists(), 10)
+        assert trashed == ["Weg damit"] and (trash / "Weg damit" / "projekt.lptab").exists()
+        assert key_a not in engine.snapshot and backend.tabs.rowCount() == tabs - 1
+        assert backend.projectPath == path_b
+        assert path_a not in [p["path"] for p in settings.recent_projects]
+        assert path_a not in settings.open_projects
+
+        # Kein Projektordner / geschützter Ort: es wird nichts angefasst
+        stranger = tmp_path / "Fremd"
+        stranger.mkdir()
+        (stranger / "brief.txt").write_text("privat", encoding="utf-8")
+        assert not backend.deleteProject(str(stranger))
+        assert not backend.deleteProject(str(Path.home()))
+        assert (stranger / "brief.txt").exists() and trashed == ["Weg damit"]
+
+        # Nicht mehr vorhandenes Projekt verschwindet nur aus der Liste
+        gone = tmp_path / "Verschwunden"
+        settings.remember_project(gone, "Verschwunden")
+        backend.forgetProject("")                       # Liste neu aufbauen
+        assert backend.deleteProject(str(gone.resolve()))
+        assert str(gone.resolve()) not in [p["path"] for p in settings.recent_projects]
+
+        # Show-Modus: gesperrt
+        backend.setShowMode(True)
+        assert not backend.deleteProject(path_b) and Path(path_b).exists()
+        backend.setShowMode(False)
+
+        # Oberfläche: Papierkorb in der Projektauswahl -> Rückfrage -> „In den Papierkorb“
+        wait_until(app, lambda: False, 0.3)
+        picker = win.findChild(QObject, "projectPicker")
+        dialog = win.findChild(QObject, "deleteProjectDialog")
+        QTest.mouseClick(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, _center(win, "projectField"))
+        assert wait_until(app, lambda: picker.property("opened"), 3)
+        row = next(r for r in _items(win.contentItem(), "ProjectRow") if r.property("path") == path_b)
+        button = next(b for b in _items(row, "AppButton") if b.objectName() == "deleteProjectButton")
+        QTest.mouseClick(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, _center_of(button))
+        assert wait_until(app, lambda: dialog.property("opened") and not picker.property("visible"), 3)
+        assert backend.projectPath == path_b and Path(path_b).exists()   # erst nach Bestätigung
+        confirm = next(b for b in _items(win.contentItem(), "AppButton") if b.property("text") == "In den Papierkorb")
+        QTest.mouseClick(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, _center_of(confirm))
+        assert wait_until(app, lambda: not Path(path_b).exists(), 10)
+        assert trashed == ["Weg damit", "Bleibt"] and backend.projectPath != path_b
+        assert all(_role(backend.tabs, i, "path") != path_b for i in range(backend.tabs.rowCount()))
+        assert wait_until(app, lambda: not dialog.property("visible"), 3)
+    finally:
+        backend.move_to_trash = real_trash
+    assert QML_ERRORS == []
+
+
+def test_drag_tiles_to_swap(ctx, tmp_path, wav_file):
+    from PySide6.QtCore import QObject, Qt
+    from PySide6.QtTest import QTest
+
+    app, backend, win = ctx.app, ctx.backend, ctx.window
+    engine = backend.engine
+    menu = win.findChild(QObject, "tileMenu")
+    assert backend.newProject("Verschieben", str(tmp_path / "projekte"), 4)
+    backend.assignAudio(0, str(wav_file("eins.wav", 3.0, 440)))
+    backend.assignAudio(1, str(wav_file("zwei.wav", 3.0, 550)))
+    assert wait_until(app, lambda: not backend.tileInfo(0)["empty"] and not backend.tileInfo(1)["empty"]
+                      and not backend.runner.pending)
+    backend.setTileLoop(0, True)
+
+    # Eine laufende Kachel tauschen: sie spielt am neuen Platz weiter
+    backend.triggerTile(0)
+    assert wait_until(app, lambda: backend.engine_key(0) in engine.snapshot, 3)
+    backend.moveTile(0, 1)
+    assert backend.tileInfo(0)["sourceName"] == "zwei.wav" and backend.tileInfo(1)["sourceName"] == "eins.wav"
+    assert wait_until(app, lambda: backend.engine_key(1) in engine.snapshot
+                      and backend.engine_key(0) not in engine.snapshot, 3)
+    assert wait_until(app, lambda: _role(backend.tiles, 1, "playing") and not _role(backend.tiles, 0, "playing"), 3)
+    backend.stopAll()
+    assert wait_until(app, lambda: engine.snapshot == {}, 3)
+
+    # Auf einen leeren Platz verschieben
+    backend.moveTile(1, 5)
+    assert backend.tileInfo(1)["empty"] and backend.tileInfo(5)["sourceName"] == "eins.wav"
+    moved = backend.project.data.peek(1, 1)
+    assert (moved.row, moved.col) == (1, 1) and backend.dirty
+    wait_until(app, lambda: False, 0.3)
+
+    # Echte Maus: Drücken startet sofort – beim Ziehen bricht der Ton ab, die Kacheln tauschen
+    start, target = _tile_center(win, 0), _tile_center(win, 5)
+    QTest.mousePress(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, start)
+    assert wait_until(app, lambda: backend.engine_key(0) in engine.snapshot, 3)
+    _glide(app, lambda p: QTest.mouseMove(win, p), start, target)
+    QTest.mouseRelease(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, target)
+    assert wait_until(app, lambda: backend.tileInfo(5)["sourceName"] == "zwei.wav", 3)
+    assert backend.tileInfo(0)["sourceName"] == "eins.wav"
+    assert wait_until(app, lambda: engine.snapshot == {}, 3)
+
+    # Touch: Ziehen verschiebt, ohne abzuspielen oder das Menü zu öffnen
+    touch = QTest.createTouchDevice()
+    start, target = _tile_center(win, 5), _tile_center(win, 10)
+    QTest.touchEvent(win, touch).press(0, start, win).commit()
+    _glide(app, lambda p: QTest.touchEvent(win, touch).move(0, p, win).commit(), start, target)
+    QTest.touchEvent(win, touch).release(0, target, win).commit()
+    assert wait_until(app, lambda: backend.tileInfo(10)["sourceName"] == "zwei.wav", 3)
+    assert backend.tileInfo(5)["empty"] and engine.snapshot == {} and not menu.property("visible")
+
+    # Show-Modus: Verschieben gesperrt
+    backend.setShowMode(True)
+    start, target = _tile_center(win, 10), _tile_center(win, 15)
+    QTest.mousePress(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, start)
+    _glide(app, lambda p: QTest.mouseMove(win, p), start, target)
+    QTest.mouseRelease(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, target)
+    wait_until(app, lambda: False, 0.3)
+    assert backend.tileInfo(10)["sourceName"] == "zwei.wav" and backend.tileInfo(15)["empty"]
+    backend.setShowMode(False)
+    backend.stopAll()
+    assert wait_until(app, lambda: engine.snapshot == {}, 3)
+
+    # Kartenwechsel mitten im Ziehen bricht ab – nichts wird im falschen Projekt getauscht
+    here = backend.activeTab
+    assert backend.newProject("Nebenkarte", str(tmp_path / "projekte"), 4)
+    other = backend.activeTab
+    backend.assignAudio(0, str(wav_file("neben.wav", 1.0, 700)))
+    assert wait_until(app, lambda: not backend.tileInfo(0)["empty"] and not backend.runner.pending)
+    backend.activateTab(here)
+    wait_until(app, lambda: False, 0.3)
+    start, target = _tile_center(win, 0), _tile_center(win, 1)
+    QTest.mousePress(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, start)
+    _glide(app, lambda p: QTest.mouseMove(win, p), start, target)
+    proxy = _find_item(win.contentItem(), "dragProxy")
+    assert proxy.property("dragging")
+    backend.activateTab(other)
+    QTest.mouseRelease(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, target)
+    wait_until(app, lambda: False, 0.3)
+    assert not proxy.property("dragging") and not proxy.isVisible()           # keine hängende Miniatur
+    assert backend.tileInfo(0)["sourceName"] == "neben.wav" and backend.tileInfo(1)["empty"]  # unberührt
+    backend.activateTab(here)
+    assert backend.tileInfo(0)["sourceName"] == "eins.wav" and backend.tileInfo(1)["empty"]
+    backend.stopAll()
+    assert wait_until(app, lambda: engine.snapshot == {}, 3)
+    assert QML_ERRORS == []
+
+
+def test_drag_tile_into_editor(ctx, tmp_path, wav_file):
+    """Kachel auf „Bearbeiten & Schneiden“ ziehen öffnet sie dort (Maus und Touch)."""
+    from PySide6.QtCore import QPoint, QPointF, Qt
+    from PySide6.QtTest import QTest
+
+    app, backend, win = ctx.app, ctx.backend, ctx.window
+    editor, engine = backend.editor, backend.engine
+    assert backend.newProject("Ziehen zum Bearbeiten", str(tmp_path / "projekte"), 4)
+    backend.assignAudio(0, str(wav_file("eins.wav", 2.0, 440)))
+    backend.assignAudio(1, str(wav_file("zwei.wav", 1.0, 550)))
+    assert wait_until(app, lambda: not backend.tileInfo(0)["empty"] and not backend.tileInfo(1)["empty"]
+                      and not backend.runner.pending)
+    wait_until(app, lambda: False, 0.3)
+    section = _find_item(win.contentItem(), "editorSection")
+    frame = _find_item(win.contentItem(), "editorDropFrame")
+    p0 = frame.mapToScene(QPointF(0, 0))
+    target = QPoint(int(p0.x() + frame.width() / 2), int(p0.y() + 100))  # Wellenform (sicher im Fenster)
+    assert target.y() < win.height() - 20
+    touch = QTest.createTouchDevice()
+
+    def touch_drag(index):
+        start = _tile_center(win, index)
+        QTest.touchEvent(win, touch).press(0, start, win).commit()
+        _glide(app, lambda p: QTest.touchEvent(win, touch).move(0, p, win).commit(), start, target)
+        hint = section.property("dropHint")
+        QTest.touchEvent(win, touch).release(0, target, win).commit()
+        wait_until(app, lambda: False, 0.3)
+        return hint
+
+    # Maus: Drücken startet die Kachel, Ziehen bricht den Ton ab, Loslassen öffnet die Bearbeitung
+    start = _tile_center(win, 0)
+    QTest.mousePress(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, start)
+    assert wait_until(app, lambda: backend.engine_key(0) in engine.snapshot, 3)
+    _glide(app, lambda p: QTest.mouseMove(win, p), start, target)
+    assert frame.isVisible() and section.property("dropOk")
+    assert section.property("dropHint") == "Zum Bearbeiten loslassen"
+    pill = _find_item(win.contentItem(), "editorDropHint")
+    assert pill.isVisible() and pill.y() > frame.height() / 2      # Zeiger oben -> Hinweis unten
+    QTest.mouseRelease(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, target)
+    assert wait_until(app, lambda: editor.active, 10)
+    assert editor.editsTile(0) and editor.tileLabel.startswith("Kachel 1 ")
+    assert wait_until(app, lambda: backend.engine_key(0) not in engine.snapshot, 3)
+    assert not frame.isVisible() and section.property("dropHint") == ""
+    assert backend.tileInfo(0)["sourceName"] == "eins.wav"      # nichts verschoben
+
+    # Dieselbe Kachel noch einmal: bleibt offen, Änderungen bleiben erhalten
+    editor.setSelStart(0.5)
+    assert touch_drag(0) == "Wird bereits bearbeitet"
+    assert editor.active and editor.editsTile(0) and editor.selStart == pytest.approx(0.5, abs=1e-3)
+
+    # Touch: andere Kachel ersetzt die offene Bearbeitung (Hinweis warnt davor)
+    assert touch_drag(1) == "Stattdessen diese Kachel bearbeiten"
+    assert wait_until(app, lambda: editor.active and editor.editsTile(1), 10)
+    assert editor.tileLabel.startswith("Kachel 2 ") and editor.duration == pytest.approx(1.0, abs=0.01)
+    assert backend.tileInfo(0)["sourceName"] == "eins.wav" and backend.tileInfo(1)["sourceName"] == "zwei.wav"
+    assert engine.snapshot == {}
+    editor.cancel()
+    assert wait_until(app, lambda: not editor.active, 3)
+    assert QML_ERRORS == []
+
+
+def test_clicks_do_not_reach_tiles_behind_popups(ctx, tmp_path, wav_file):
+    from PySide6.QtCore import Q_ARG, QMetaObject, QObject, Qt
+    from PySide6.QtTest import QTest
+
+    app, backend, win = ctx.app, ctx.backend, ctx.window
+    engine = backend.engine
+    assert backend.newProject("Durchklicken", str(tmp_path / "projekte"), 4)
+    backend.dropOnTile(0, [str(wav_file(f"k{i}.wav", 2.0, 300 + 20 * i)) for i in range(16)])
+    assert wait_until(app, lambda: all(not backend.tileInfo(i)["empty"] for i in range(16))
+                      and not backend.runner.pending, 30)
+    wait_until(app, lambda: False, 0.3)
+
+    # Farbkreise im Kachel-Menü liegen über Kacheln: Klick färbt nur, startet nichts dahinter
+    menu = win.findChild(QObject, "tileMenu")
+    QMetaObject.invokeMethod(menu, "openFor", Q_ARG("QVariant", 0))
+    assert wait_until(app, lambda: menu.property("opened"), 3)
+    swatches = [s for s in _items(win.contentItem(), "QQuickRectangle")
+                if abs(s.width() - 40) < 0.5 and abs(s.height() - 40) < 0.5 and s.property("radius") == 20]
+    over = [s for s in swatches if _tile_under(win, _center_of(s), 16) is not None]
+    assert len(over) >= 2
+    QTest.mouseClick(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, _center_of(over[0]))
+    wait_until(app, lambda: False, 0.3)
+    assert engine.snapshot == {}
+    assert backend.tileInfo(0)["color"].upper() == over[0].property("color").name().upper()
+    touch = QTest.createTouchDevice()
+    QTest.touchEvent(win, touch).press(0, _center_of(over[1]), win).commit()
+    wait_until(app, lambda: False, 0.6)                   # länger als "lange drücken"
+    QTest.touchEvent(win, touch).release(0, _center_of(over[1]), win).commit()
+    wait_until(app, lambda: False, 0.3)
+    assert engine.snapshot == {} and menu.property("tileIndex") == 0
+    menu.close()
+    assert wait_until(app, lambda: not menu.property("visible"), 3)
+
+    # Hinweis-Meldungen über den Kacheln: Antippen schließt sie, die Kachel darunter bleibt stumm
+    note = "Hinweis über den Kacheln"
+    backend.notify(note, "info")
+    wait_until(app, lambda: False, 0.3)
+    texts = [t for t in _items(win.contentItem(), "QQuickText") if t.property("text") == note]
+    assert texts and _tile_under(win, _center_of(texts[0]), 16) is not None
+    QTest.mouseClick(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, _center_of(texts[0]))
+    wait_until(app, lambda: False, 0.3)
+    assert engine.snapshot == {}
+    assert not [t for t in _items(win.contentItem(), "QQuickText") if t.property("text") == note]
+    assert QML_ERRORS == []
+
+
+def test_fader_tracks_follow_theme(ctx):
+    from PySide6.QtGui import QColor
+
+    app, backend, win = ctx.app, ctx.backend, ctx.window
+    tracks = [_find_item(_find_item(win.contentItem(), name), "faderTrack")
+              for name in ("masterSection", "editorSection")]
+    assert all(t is not None for t in tracks)
+    backend.setThemeMode("light")
+    wait_until(app, lambda: False, 0.1)
+    assert [t.property("color") for t in tracks] == [QColor("#DDE2E9")] * 2   # hellgrau im hellen Modus
+    backend.setThemeMode("dark")
+    wait_until(app, lambda: False, 0.1)
+    assert [t.property("color") for t in tracks] == [QColor("#050506")] * 2
+
+
+def test_fullscreen_switch(ctx):
+    from PySide6.QtCore import QObject, Qt
+    from PySide6.QtGui import QWindow
+    from PySide6.QtTest import QTest
+
+    from launchpad_pro_tab.core.settings import AppSettings
+
+    app, backend, win = ctx.app, ctx.backend, ctx.window
+    full, windowed = QWindow.Visibility.FullScreen, QWindow.Visibility.Windowed
+    size = (win.width(), win.height())
+    assert win.visibility() == windowed and not backend.fullscreen
+
+    # Schalter in Einstellungen → Darstellung
+    dlg = win.findChild(QObject, "settingsDialog")
+    dlg.setProperty("page", 0)
+    dlg.open()
+    assert wait_until(app, lambda: dlg.property("opened"), 3)
+    wait_until(app, lambda: False, 0.3)
+    switch = _find_item(win.contentItem(), "fullscreenSwitch")
+    assert switch is not None and switch.isVisible() and not switch.property("checked")
+    QTest.mouseClick(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, _center_of(switch))
+    assert wait_until(app, lambda: win.visibility() == full, 3)
+    assert backend.fullscreen and switch.property("checked")
+    assert AppSettings.load(ctx.settings._path).fullscreen is True           # für den nächsten Start gemerkt
+    wait_until(app, lambda: False, 0.3)                                     # Dialog neu zentriert
+    QTest.mouseClick(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, _center_of(switch))
+    assert wait_until(app, lambda: win.visibility() == windowed, 3)         # vorheriger Fensterzustand
+    assert not backend.fullscreen and not switch.property("checked") and not ctx.settings.fullscreen
+    dlg.close()
+    assert wait_until(app, lambda: not dlg.property("visible"), 3)
+
+    # F11 und das Fenstersystem schalten mit – der Schalter zeigt immer den echten Zustand
+    QTest.keyClick(win, Qt.Key.Key_F11)
+    assert wait_until(app, lambda: win.visibility() == full, 3)
+    assert backend.fullscreen and switch.property("checked")
+    win.showNormal()
+    assert wait_until(app, lambda: not backend.fullscreen, 3) and not switch.property("checked")
+    win.showMinimized()                                                     # Minimieren ändert nichts
+    wait_until(app, lambda: False, 0.2)
+    assert not backend.fullscreen
+    win.showNormal()
+    wait_until(app, lambda: False, 0.2)                                     # Fenstersystem meldet nach
+
+    # --fullscreen gilt nur für diesen Start, die gespeicherte Einstellung bleibt
+    backend.start_fullscreen()
+    assert wait_until(app, lambda: win.visibility() == full, 3)
+    assert not ctx.settings.fullscreen
+    backend.setFullscreen(False)
+    assert wait_until(app, lambda: win.visibility() == windowed, 3)
+    win.setWidth(size[0])
+    win.setHeight(size[1])
+    wait_until(app, lambda: False, 0.2)
+    assert (win.width(), win.height()) == size
     assert QML_ERRORS == []

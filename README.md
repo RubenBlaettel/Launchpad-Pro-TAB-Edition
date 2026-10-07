@@ -29,7 +29,9 @@ Master-Fader für die Windows-Systemlautstärke, ein **dunkles und ein helles De
 4. [Bedienungsanleitung](#bedienungsanleitung)
    - [Aufbau der Oberfläche](#aufbau-der-oberfläche)
    - [Projekte](#projekte)
+   - [Registerkarten: mehrere Projekte gleichzeitig](#registerkarten-mehrere-projekte-gleichzeitig)
    - [Kacheln belegen](#kacheln-belegen)
+   - [Kacheln verschieben](#kacheln-verschieben)
    - [Abspielen](#abspielen)
    - [Raster ändern](#raster-ändern)
    - [Bearbeiten & Schneiden](#bearbeiten--schneiden)
@@ -50,14 +52,14 @@ Master-Fader für die Windows-Systemlautstärke, ein **dunkles und ein helles De
 
 | Bereich | Funktion |
 |---|---|
-| **Kachel-Raster** | 3×3 bis 7×7 Kacheln (Dropdown), eigene Farbe, Titel und Coverbild je Kachel, Leuchten + Restzeit + Fortschrittsbalken während der Wiedergabe |
+| **Kachel-Raster** | 3×3 bis 7×7 Kacheln (Dropdown), eigene Farbe, Titel und Coverbild je Kachel, Leuchten + Restzeit + Fortschrittsbalken während der Wiedergabe; Kacheln per **Drag & Drop tauschen** |
 | **Abspielen** | Linksklick/Tippen = Start, erneut = Stopp (mit kurzem Fade gegen Knackser); mehrere Kacheln gleichzeitig; Schleife je Kachel; **ALLES STOPPEN**; Multi-Touch |
 | **Belegen** | Rechtsklick/lang drücken öffnet die Auswahlliste (Audio-Datei, Coverbild, Titel, Farbe, Schleife, **Bearbeiten**, **Löschen** mit „Rückgängig“); Drag & Drop aus dem Explorer oder aus der Liste „Zuletzt verwendet“ |
-| **Bearbeiten & Schneiden** | Wellenform mit Zeitraster, Ausschnitt wählen, Zoom, Schnelligkeit 0,5×–2,0× **ohne Tonhöhenänderung** (Rastpunkt „normal“), Lautstärke 10 %–200 % per Fader (Rastpunkt 100 %), Vorhören, Speichern auf die Kachel – nicht-destruktiv, jederzeit wieder änderbar |
-| **Projekte** | Neu, Öffnen, Speichern, Speichern unter, Export als ZIP; alle Audio- und Bilddateien liegen im Projektordner; zyklisches automatisches Speichern; das letzte Projekt wird beim Start geöffnet; Doppelklick auf eine Projektdatei öffnet sie |
+| **Bearbeiten & Schneiden** | Kachel über die Auswahlliste oder per **Ziehen in den Bereich** öffnen; Wellenform mit Zeitraster, Ausschnitt wählen, Zoom, Schnelligkeit 0,5×–2,0× **ohne Tonhöhenänderung** (Rastpunkt „normal“), Lautstärke 10 %–200 % per Fader (Rastpunkt 100 %), Vorhören, Speichern auf die Kachel – nicht-destruktiv, jederzeit wieder änderbar |
+| **Projekte** | Mehrere Projekte gleichzeitig in **Registerkarten** (wie im Browser; Kacheln im Hintergrund spielen weiter); Projektauswahl mit den zuletzt geöffneten Projekten; Neu, Öffnen, Speichern, Speichern unter, Export als ZIP; alle Audio- und Bilddateien liegen im Projektordner; zyklisches automatisches Speichern; offene Registerkarten werden beim Start wiederhergestellt; Doppelklick auf eine Projektdatei öffnet sie |
 | **Sicherheit** | Speichern beim Schließen, atomares Schreiben + Sicherungskopie, Wiederherstellung einer laufenden Bearbeitung nach einem Absturz, **Show-Modus** (sperrt alle Bearbeitungen während der Vorstellung), nur eine laufende Programminstanz |
 | **Master** | Roter, horizontaler Master-Fader für die **Windows-Systemlautstärke**, Stummschalter, Stereo-Pegelanzeige mit LIMIT-Anzeige |
-| **Darstellung** | **Dunkel** (blendfrei im Saal), **Hell** (für helle Räume) oder **wie Windows** – Schnellumschalter oben rechts |
+| **Darstellung** | **Dunkel** (blendfrei im Saal), **Hell** (für helle Räume) oder **wie Windows** – Schnellumschalter oben rechts; **Vollbild**-Schalter (bleibt gespeichert) |
 | **Installation & Updates** | Windows-Installer (Programmordner, Desktop-/Startmenü-Verknüpfung, Deinstallation samt optionaler Datenlöschung), Linux-Paket; Update-Prüfung beim Start, Installation per Klick mit Prüfsummenkontrolle und automatischem Neustart |
 | **Leistung** | Vorab dekodierte Audiodaten (kein Laden beim Antippen), WASAPI-Ausgabe mit ~10 ms Puffer, Dekodieren/Rendern parallel auf mehreren CPU-Kernen, GPU-beschleunigte Oberfläche (Qt Quick) |
 
@@ -159,7 +161,7 @@ Nützliche Startoptionen:
 
 | Option | Wirkung |
 |---|---|
-| `--fullscreen` | Vollbild (z. B. für ein Touch-Terminal); `F11` schaltet jederzeit um |
+| `--fullscreen` | diesmal im Vollbild starten (z. B. Verknüpfung für ein Touch-Terminal), ohne die gespeicherte Einstellung zu ändern; dauerhaft: *Einstellungen › Darstellung* |
 | `--project <Pfad>` | bestimmtes Projekt (Ordner, `projekt.lptab` oder Export-ZIP) öffnen – auch ohne `--project` als Dateipfad |
 | `--no-audio` | ohne Soundkarte starten (stumm) |
 | `--no-update-check` | beim Start nicht nach Updates suchen |
@@ -218,10 +220,12 @@ zulassen, um neue Funktionen vor der Freigabe zu testen.
 | **Kopfleiste** | ggf. **Update**-Hinweis, Audio-Status, Anzahl laufender Kacheln, **Raster**-Dropdown, **Show-Modus**, **ALLES STOPPEN**, Hell/Dunkel-Umschalter, Einstellungen |
 | **Links oben – Zuletzt verwendet** | zuletzt benutzte Audiodateien (Suche, `+` zum Hinzufügen, `×` zum Entfernen) |
 | **Links – Optionen** | **Projekt**, **Bearbeiten & Schneiden**, **Master-Lautstärke** |
-| **Rechts – Kachel-Raster** | die Launchpad-Kacheln |
+| **Rechts – Registerkarten** | ein Tab je geöffnetem Projekt, `+` für eine neue Karte |
+| **Rechts – Kachel-Raster** | die Launchpad-Kacheln des Projekts der aktiven Registerkarte |
 
 Beim allerersten Start erscheint rechts der Willkommensbildschirm mit **Neues Projekt** und
-**Projekt öffnen**. Ab dann wird beim Start immer das zuletzt benutzte Projekt geladen.
+**Projekt öffnen**. Ab dann öffnet Launchpad Pro beim Start alle Registerkarten wieder, die beim
+Beenden offen waren – aktiv ist das zuletzt benutzte Projekt.
 
 Auf kleineren Bildschirmen (z. B. 1366×768) passt nicht alles untereinander – dann lässt sich die
 linke Spalte mit dem Finger (oder Mausrad) scrollen. Das Kachel-Raster bleibt immer vollständig
@@ -230,12 +234,28 @@ sichtbar.
 ### Projekte
 
 Oben im Bereich **Projekt** stehen der Name des aktuellen Projekts, der Ablageort und der
-Speicherstatus („Gespeichert um 14:32“).
+Speicherstatus („Gespeichert um 14:32“). Ein Klick auf das Projektfeld öffnet die
+**Projektauswahl** mit den zuletzt geöffneten Projekten: **AKTIV** markiert das Projekt der
+aktuellen Registerkarte, **OFFEN** Projekte in anderen Karten (ein Klick springt dorthin) – alle
+übrigen öffnen sich in einer neuen Registerkarte. **Weitere Projekte öffnen …** führt zum Dialog
+*Öffnen*.
+
+![Projektauswahl](docs/images/18_projektauswahl.png)
+
+**Projekt löschen:** Der Papierkorb rechts in einer Zeile (Projektauswahl und Startseite)
+verschiebt das Projekt nach einer Rückfrage **in den Papierkorb** – mit allen Audio-Kopien,
+Coverbildern und Bearbeitungen. Wiederherstellen lässt es sich bei Bedarf über den Papierkorb von
+Windows. Ist das Projekt gerade geöffnet, wird es vorher gespeichert, seine Kacheln werden gestoppt
+und die Registerkarte wird geschlossen. Einträge mit „nicht gefunden“ verschwinden ohne Rückfrage
+nur aus der Liste. Gelöscht wird ausschließlich ein Ordner mit einer Projektdatei
+(`projekt.lptab`), nie z. B. der Ordner *Dokumente*. Im **Show-Modus** ist das Löschen gesperrt.
+
+![Projekt löschen](docs/images/21_projekt_loeschen.png)
 
 | Schaltfläche | Funktion |
 |---|---|
-| **Öffnen** | Liste der zuletzt geöffneten Projekte; **Durchsuchen …** öffnet Projektordner (`projekt.lptab`) oder exportierte Projekte (`.zip`, werden automatisch entpackt) |
-| **Neu** | Pop-up mit **Projektname**, **Ablageort** und **Kachelanzahl** – unten links **Abbrechen**, unten rechts **Projekt erstellen** |
+| **Öffnen** | Liste der zuletzt geöffneten Projekte; **Durchsuchen …** öffnet Projektordner (`projekt.lptab`) oder exportierte Projekte (`.zip`, werden automatisch entpackt) – jeweils in einer neuen Registerkarte |
+| **Neu** | Pop-up mit **Projektname**, **Ablageort** und **Kachelanzahl** – unten links **Abbrechen**, unten rechts **Projekt erstellen** (öffnet sich in einer neuen Registerkarte) |
 | **Speichern** | sofort speichern (zusätzlich zum automatischen Speichern) |
 | **Speichern unter …** | komplettes Projekt (inkl. Audio, Cover, Bearbeitungen) in einen gewählten Ordner kopieren und dort weiterarbeiten |
 | **Exportieren** | ganzes Projekt als **ZIP-Datei** (zum Weitergeben, Sichern oder Umziehen auf einen anderen PC) |
@@ -247,12 +267,32 @@ Launchpad Pro bereits, öffnet das laufende Programm das Projekt (es startet kei
 
 ![Projekt öffnen](docs/images/10_projekt_oeffnen.png)
 
+### Registerkarten: mehrere Projekte gleichzeitig
+
+Über dem Kachel-Raster steht für jedes geöffnete Projekt eine **Registerkarte** – wie im Browser.
+Ein Klick (oder `Strg+Tab`) wechselt das Projekt; Kacheln, Raster, Bereich *Projekt* und
+*Bearbeiten & Schneiden* zeigen dann das Projekt dieser Karte.
+
+- **Kacheln im Hintergrund spielen weiter** (z. B. eine Atmo-Schleife aus dem einen Projekt, während
+  man im anderen Effekte abfeuert). Die Karte zeigt dann **▶** und die Zahl laufender Kacheln.
+  **ALLES STOPPEN** stoppt die Kacheln *aller* Karten.
+- Der Punkt vor dem Namen zeigt den Speicherstand (grün = gespeichert, gelb = ungespeichert).
+- **`+`** öffnet eine leere Karte mit der Startseite (Neues Projekt, Projekt öffnen, zuletzt
+  geöffnete Projekte). **`×`** (oder die mittlere Maustaste) schließt eine Karte – das Projekt wird
+  vorher gespeichert, seine laufenden Kacheln blenden aus. Am Touchmonitor schließt nur das `×`;
+  Antippen der übrigen Karte holt das Projekt nach vorne.
+- Ist ein Projekt schon offen, springt *Öffnen* einfach zu seiner Karte (kein zweites Mal öffnen).
+- Eine offene Bearbeitung wird beim Wechsel als Zwischenstand gesichert und beim Zurückwechseln
+  wiederhergestellt.
+- Im **Show-Modus** lässt sich zwischen den Karten wechseln, aber keine öffnen oder schließen.
+
 ### Kacheln belegen
 
 Es gibt drei Wege, eine Kachel mit Musik zu belegen:
 
 1. **Rechtsklick** (Maus) oder **lange drücken** (Touch, ca. ½ Sekunde – ein Ring zeigt den
-   Fortschritt) öffnet die **Auswahlliste** der Kachel. Links stehen die zuletzt verwendeten
+   Fortschritt) öffnet die **Auswahlliste** der Kachel. Sie bleibt offen, auch wenn der Finger
+   noch länger liegt (Windows' eigenes „Gedrückt halten = Rechtsklick“ ist im Programm abgeschaltet). Links stehen die zuletzt verwendeten
    Audiodateien – antippen genügt. Über **Datei durchsuchen …** wählt man eine neue Datei.
    Eine **leere Kachel** öffnet die Auswahlliste schon beim einfachen Antippen.
 2. **Drag & Drop aus dem Explorer:** Audiodatei direkt auf die Kachel ziehen. Mehrere Dateien auf
@@ -275,9 +315,24 @@ In der Auswahlliste lassen sich außerdem einstellen:
 
 ![Auswahlliste einer Kachel](docs/images/03_kachelmenue.png)
 
+### Kacheln verschieben
+
+Eine belegte Kachel lässt sich mit der Maus oder dem Finger **auf eine andere Kachel ziehen**:
+Beide tauschen die Plätze (auf eine leere Kachel wird sie einfach verschoben). Farbe, Cover,
+Titel, Schleife und Bearbeitung ziehen mit um; eine gerade laufende Kachel spielt am neuen Platz
+weiter. Während des Ziehens schwebt eine Miniatur über dem Finger, die Zielkachel zeigt
+**Plätze tauschen** bzw. **Hierher verschieben**.
+
+Mit der Maus startet ein Klick die Kachel wie gewohnt **sofort beim Drücken** – beginnt man mit
+gedrückter Taste zu ziehen, wird der gerade gestartete Ton gleich wieder ausgeblendet. Per Touch
+spielt das Ziehen nichts ab. Im **Show-Modus** ist das Verschieben gesperrt.
+
+![Kachel verschieben](docs/images/19_kachel_verschieben.png)
+
 ### Abspielen
 
 - **Maus:** Linksklick startet sofort beim Drücken. Erneuter Klick stoppt (mit kurzem Ausblenden).
+  Wird aus dem Klick ein Ziehen, bricht der Ton ab (siehe *Kacheln verschieben*).
 - **Touch:** kurzes Antippen startet/stoppt. **Mehrere Finger gleichzeitig** funktionieren.
 - Beliebig viele Kacheln können **gleichzeitig** laufen (z. B. Regen-Atmo + Donner).
   Ein Limiter schützt dabei vor Übersteuerung (Anzeige **LIMIT** beim Master).
@@ -289,8 +344,9 @@ In der Auswahlliste lassen sich außerdem einstellen:
 #### Show-Modus (für die Vorstellung)
 
 Der Schalter **Show-Modus** in der Kopfleiste sperrt alles, was während einer Vorstellung nicht
-passieren darf: Kein Menü durch versehentliches langes Drücken, kein Drag & Drop, kein Bearbeiten,
-kein Rasterwechsel, keine Update-Installation. Zusätzlich lösen Kacheln bei Touch **schon beim
+passieren darf: Kein Menü durch versehentliches langes Drücken, kein Drag & Drop, kein Verschieben,
+kein Bearbeiten, kein Rasterwechsel, kein Öffnen oder Schließen von Projekten, keine
+Update-Installation. Zwischen offenen Registerkarten lässt sich weiterhin wechseln. Zusätzlich lösen Kacheln bei Touch **schon beim
 Berühren** aus (noch schneller). Oben erscheint ein gelber Hinweis, solange der Show-Modus aktiv ist.
 
 ![Show-Modus](docs/images/09_show_modus.png)
@@ -306,7 +362,17 @@ verworfen, mit **Abbrechen** bleibt alles, wie es war.
 
 ### Bearbeiten & Schneiden
 
-Der Bereich ist ausgegraut, bis in der Auswahlliste einer Kachel **Bearbeiten** gewählt wird.
+Der Bereich ist ausgegraut, bis eine Kachel zum Bearbeiten geöffnet wird – auf zwei Wegen:
+
+- in der Auswahlliste einer Kachel **Bearbeiten** wählen, oder
+- die Kachel mit Maus oder Finger **in den Bereich *Bearbeiten & Schneiden* ziehen**. Sobald eine
+  Kachel gezogen wird, ist der Bereich grün umrandet; darüber erscheint **Zum Bearbeiten
+  loslassen**. Ist schon eine andere Kachel geöffnet, lautet der Hinweis **Stattdessen diese
+  Kachel bearbeiten** – deren ungespeicherte Änderungen werden dann verworfen. Die gerade
+  bearbeitete Kachel selbst bleibt unverändert offen. Ein per Mausklick gestarteter Ton bricht
+  beim Ziehen ab; im **Show-Modus** ist das Ziehen gesperrt.
+
+![Kachel in „Bearbeiten & Schneiden“ ziehen](docs/images/20_kachel_bearbeiten.png)
 
 ![Bearbeiten & Schneiden](docs/images/06_bearbeiten.png)
 
@@ -320,6 +386,7 @@ Der Bereich ist ausgegraut, bis in der Auswahlliste einer Kachel **Bearbeiten** 
 2. **Anfang hier / Ende hier:** setzt die Auswahl exakt an die aktuelle Abspielposition – ideal
    zum Schneiden „nach Gehör“: abspielen, an der richtigen Stelle **Pause**, **Anfang hier**.
 3. **Schnelligkeit:** 0,5× bis 2,0×; die **Tonhöhe bleibt erhalten** (keine „Micky-Maus-Stimme“).
+   Auch Akkorde, Klavier und Glocken bleiben klar, Schläge und Einsätze knackig.
    Der Regler rastet bei **normal** (1,0×) ein; Doppeltippen setzt ihn zurück. Unter den Zeiten
    steht die resultierende Länge („Auswahl 0:33,4 → 0:26,7“).
 4. **Tasten:** **Von Anfang** (zum Auswahlanfang), **Schritt zurück / Schritt vor** (1 Sekunde;
@@ -354,8 +421,13 @@ Vorbereitung in hellen Räumen gibt es das **helle Design**:
 ![Helles Design](docs/images/12_hauptansicht_hell.png)
 
 - **Schnellumschalter:** Sonnen- bzw. Mond-Symbol oben rechts neben den Einstellungen.
+- Im hellen Design sind auch die Fader-Bahnen (Master-Lautstärke, Lautstärke im Editor) hellgrau.
 - **Einstellungen › Darstellung:** **Dunkel**, **Hell** oder **Wie Windows** (folgt automatisch der
   Windows-Einstellung *Farbmodus*; unter Linux der Systemeinstellung). Die Wahl bleibt gespeichert.
+- **Vollbild:** Schalter unter *Einstellungen › Darstellung › Fenster* – ohne Titel- und Taskleiste,
+  ideal für ein Touch-Terminal und während der Vorstellung. Die Einstellung bleibt gespeichert, das
+  Programm startet dann direkt im Vollbild. `F11` schaltet ebenfalls um (der Schalter folgt);
+  beim Verlassen kehrt das Fenster in seinen vorherigen Zustand zurück.
 
 ![Einstellungen › Darstellung](docs/images/11_einstellungen.png)
 
@@ -367,7 +439,7 @@ Vorbereitung in hellen Räumen gibt es das **helle Design**:
 
 Über das Regler-Symbol oben rechts – vier Reiter:
 
-- **Darstellung:** Dunkel / Hell / Wie Windows (siehe oben).
+- **Darstellung:** Dunkel / Hell / Wie Windows und Vollbild (siehe oben).
 - **Audio:** Audio-Ausgabe – Standardgerät (automatisch, unter Windows über WASAPI mit geringer
   Latenz) oder ein bestimmtes Gerät (z. B. USB-Audiointerface des Mischpults). **Puffergröße:**
   *Automatisch* ist die niedrigste stabile Latenz; bei Knacksern auf schwachen Rechnern 512 oder
@@ -384,9 +456,11 @@ Vorbereitung in hellen Räumen gibt es das **helle Design**:
 | `Strg+S` | Projekt speichern |
 | `Strg+Umschalt+S` | Speichern unter |
 | `Strg+E` | Projekt exportieren |
-| `Strg+O` / `Strg+N` | Projekt öffnen / neues Projekt |
+| `Strg+O` / `Strg+N` | Projekt öffnen / neues Projekt (jeweils in einer neuen Registerkarte) |
+| `Strg+Tab` / `Strg+Umschalt+Tab` | nächste / vorige Registerkarte (auch `Strg+Bild↓` / `Strg+Bild↑`) |
+| `Strg+T` / `Strg+W` | neue leere Registerkarte / aktuelle Registerkarte schließen |
 | `Leertaste` | Play/Pause im Bereich *Bearbeiten & Schneiden* |
-| `F11` | Vollbild ein/aus |
+| `F11` | Vollbild ein/aus (wie der Schalter unter *Einstellungen › Darstellung*) |
 
 ---
 
@@ -465,19 +539,19 @@ Programmpakete mit **PyInstaller**.
 
 ```text
 ┌────────────────────────── QML (launchpad_pro_tab/qml) ──────────────────────────┐
-│ Main · TopBar · TileGrid/Tile · RecentList · ProjectSection · EditorSection ·    │
-│ MasterSection · TileMenu · Settings/Update-Dialog · Theme (Dunkel/Hell)          │
+│ Main · TopBar · TabStrip · TileGrid/Tile · RecentList · ProjectSection ·         │
+│ EditorSection · MasterSection · TileMenu · Dialoge · Theme · UiState             │
 └──────▲──────────────────────▲─────────────────────▲─────────────────────▲───────┘
        │ Properties/Slots/Signale                    │                     │
 ┌──────┴─────────────┐ ┌──────┴────────────┐ ┌──────┴────────────┐ ┌──────┴──────────┐
 │ bridge.Backend     │ │ bridge.Editor-    │ │ bridge.Update-    │ │ bridge.Master-  │
-│ Projekte, Kacheln, │ │ Controller        │ │ Controller        │ │ VolumeController│
-│ Drag&Drop, Theme   │ │ Vorschau, Rendern │ │ GitHub, Download  │ │ (eigener Thread)│
+│ Registerkarten,    │ │ Controller        │ │ Controller        │ │ VolumeController│
+│ Kacheln, DnD, Theme│ │ Vorschau, Rendern │ │ GitHub, Download  │ │ (eigener Thread)│
 └──┬──────────┬──────┘ └──────┬────────────┘ └──────┬────────────┘ └──────▲──────────┘
    │          │ TaskRunner (Prozess-Pool = mehrere CPU-Kerne, Threads für I/O)   │
 ┌──▼──────┐ ┌─▼───────────────────────────┐ ┌───────▼─────────────┐ ┌──────┴──────────┐
 │ core    │ │ audio.tasks: decode → cache,│ │ update: releases,   │ │ system.volume / │
-│ Projekt,│ │ render_edit (WSOLA, Limiter)│ │ download (SHA-256), │ │ integration     │
+│ Projekt,│ │ render_edit (Tempo, Limiter)│ │ download (SHA-256), │ │ integration     │
 │ Purge   │ └─────────────────────────────┘ │ install (Win/Linux) │ └─────────────────┘
 └─────────┘  audio.engine: Mixer im Audio-Thread (PortAudio/WASAPI)  └─────────────────────┘
 ```
@@ -490,9 +564,10 @@ Programmpakete mit **PyInstaller**.
   geladen, ein Prefetch-Thread liest laufende Dateien voraus (memory mapping, kaum RAM-Verbrauch).
 - Der Mixer läuft im Audio-Thread von PortAudio (WASAPI, „low latency“) und bekommt Befehle über eine
   lock-freie Warteschlange. Mausklicks lösen **beim Drücken** aus.
-- Tonhöhenerhaltendes **Time-Stretching (WSOLA)** ist streamingfähig: dieselbe Implementierung
-  läuft live in der Vorschau und beim Rendern (was man hört, wird gespeichert). Bei 1,0× arbeitet sie
-  bit-genau.
+- Tonhöhenerhaltendes **Time-Stretching** (Phase-Vocoder mit Identity Phase Locking, gemeinsamer
+  Phasendrehung für beide Stereokanäle und Transienten-Erkennung) ist streamingfähig: dieselbe
+  Implementierung läuft live in der Vorschau und beim Rendern (was man hört, wird gespeichert). Bei
+  1,0× gibt sie das Signal unverändert aus.
 - Die Oberfläche wird von der GPU gezeichnet; Animationen (Leuchten, Fortschritt) laufen im
   Render-Thread. Die Wellenform wird nur bei Zoom/Auswahl/Farbschema neu gezeichnet.
 - Die Update-Prüfung läuft in einem Hintergrund-Thread und berührt Audio und Oberfläche nicht.
@@ -506,7 +581,7 @@ Bruchteil der verfügbaren Zeit – Reserven gegen Aussetzer sind also reichlich
 | 1 Kachel | 256 Samples (5,3 ms) | 0,04 ms | 0,7 % |
 | 8 Kacheln gleichzeitig | 256 Samples (5,3 ms) | 0,10 ms | 1,8 % |
 | 16 Kacheln gleichzeitig | 256 Samples (5,3 ms) | 0,19 ms | 3,6 % |
-| Vorschau mit Time-Stretch 1,25× | 256 Samples (5,3 ms) | 0,12 ms | 2,3 % |
+| Vorschau mit Time-Stretch 1,25× | 256 Samples (5,3 ms) | 0,14 ms (jeder 4. Block bis 0,7 ms) | 2,6 % |
 
 **Update-Ablauf im Detail**
 

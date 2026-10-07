@@ -51,6 +51,7 @@ Item {
 
     Rectangle {
         id: track
+        objectName: "faderTrack"
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.top: scaleRow.bottom
@@ -71,7 +72,7 @@ Item {
             width: track.width - 12 - track.capW
             height: 4
             radius: 2
-            color: "#26282E"
+            color: Theme.faderSlot
         }
         Rectangle {
             anchors.verticalCenter: parent.verticalCenter

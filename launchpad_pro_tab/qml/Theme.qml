@@ -43,13 +43,17 @@ QtObject {
     readonly property color info: dark ? "#4DA3FF" : "#1D6FD6"
     readonly property color master: dark ? "#E8262F" : "#E0232C"       // roter Master-Fader (Bild 3)
 
-    // Fader-Optik (angelehnt an Bild 3): Bahn bleibt in beiden Modi schwarz wie am Mischpult
-    readonly property color faderStrip: dark ? "#3B3F47" : "#CBD0D8"
-    readonly property color faderStripLight: dark ? "#4A4F59" : "#DDE1E7"
-    readonly property color faderBorder: dark ? "#555A64" : "#AAB1BC"
-    readonly property color faderTrack: dark ? "#050506" : "#17191E"
-    readonly property color faderTrackBorder: dark ? "#1B1C20" : "#0E0F12"
-    readonly property color faderScale: "#C9CDD4"                      // Skala auf der Bahn
+    // Fader-Optik (angelehnt an Bild 3): dunkel = schwarze Bahn wie am Mischpult,
+    // hell = hellgraue Bahn mit dunkler Skala
+    readonly property color faderStrip: dark ? "#3B3F47" : "#E6EAF0"
+    readonly property color faderStripLight: dark ? "#4A4F59" : "#F5F7FA"
+    readonly property color faderBorder: dark ? "#555A64" : "#C3CAD5"
+    readonly property color faderTrack: dark ? "#050506" : "#DDE2E9"
+    readonly property color faderTrackBorder: dark ? "#1B1C20" : "#C3CAD5"
+    readonly property color faderSlot: dark ? "#26282E" : "#B9C1CD"    // Schlitz in der Bahn
+    readonly property color faderSlotBorder: dark ? "#000000" : "#A7B0BD"
+    readonly property color faderScale: dark ? "#C9CDD4" : "#5A6475"   // Skala auf der Bahn
+    readonly property color faderScaleStrong: dark ? "#FFFFFF" : "#141821"  // Normalstellung (100 %)
     readonly property color faderText: dark ? "#FFFFFF" : "#141821"   // Anzeige unter der Bahn
     readonly property color faderTextDim: dark ? "#C9CDD4" : "#4A5263"
     readonly property color faderLabel: dark ? "#E3E6EA" : "#2A303B"

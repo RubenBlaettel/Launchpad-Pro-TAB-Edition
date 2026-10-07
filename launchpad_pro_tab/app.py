@@ -55,7 +55,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     p.add_argument("path", nargs="?", help="Projektordner, projekt.lptab oder Export-ZIP (z. B. per Doppelklick)")
     p.add_argument("--project", help="Projektordner, projekt.lptab oder Export-ZIP öffnen")
     p.add_argument("--no-audio", action="store_true", help="ohne Soundkarte starten (stumm)")
-    p.add_argument("--fullscreen", action="store_true", help="im Vollbild starten (Touch-Terminal)")
+    p.add_argument("--fullscreen", action="store_true", help="diesmal im Vollbild starten (Touch-Terminal); dauerhaft: Einstellungen → Darstellung")
     p.add_argument("--verbose", action="store_true", help="ausführliches Protokoll")
     p.add_argument("--smoke-test", action="store_true",
                    help="Selbsttest: Oberfläche laden, kurz laufen lassen, beenden (Exit-Code 0 = OK)")
@@ -91,6 +91,7 @@ class AppContext:
         self.engine = engine
         self.runner = runner
         self.settings = settings
+        self.input_filter = None     # Filter gegen System-Rechtsklicks von Finger/Stift
 
     @property
     def window(self):
@@ -104,7 +105,10 @@ class AppContext:
             from PySide6.QtGui import QWindow
 
             if win.visibility() == QWindow.Visibility.Minimized:
-                win.showMaximized()
+                if self.backend.fullscreen:
+                    win.showFullScreen()
+                else:
+                    win.showMaximized()
             win.show()
             win.raise_()
             win.requestActivate()
@@ -178,6 +182,8 @@ def create_app(argv: list[str], *, no_audio: bool = False, fullscreen: bool = Fa
     runner.warm_up()
     documents = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.DocumentsLocation)
     backend = Backend(engine, runner, settings, Path(documents) if documents else None)
+    if fullscreen:
+        backend.start_fullscreen()
 
     qml = QQmlApplicationEngine()
     ctx = qml.rootContext()
@@ -188,17 +194,33 @@ def create_app(argv: list[str], *, no_audio: bool = False, fullscreen: bool = Fa
     ctx.setContextProperty("appVersion", __version__)
     ctx.setContextProperty("appFontFamily", family)
     ctx.setContextProperty("logFile", str(config_dir() / "launchpad.log"))
-    ctx.setContextProperty("startFullscreen", bool(fullscreen))
+    ctx.setContextProperty("startFullscreen", backend.fullscreen)   # gespeicherte Einstellung oder --fullscreen
     qml.load(QUrl.fromLocalFile(str(QML_DIR / "Main.qml")))
     context = AppContext(app, qml, backend, engine, runner, settings)
     if not qml.rootObjects():
         backend.shutdown()
         raise RuntimeError("Die Oberfläche konnte nicht geladen werden (siehe Protokoll).")
+    _prepare_touch_input(context)
     backend.start(check_updates=check_updates)
     app.aboutToQuit.connect(backend.shutdown)
     if engine.error:
         backend.notify(f"Keine Audioausgabe verfügbar: {engine.error}", "error")
     return context
+
+
+def _prepare_touch_input(context: AppContext) -> None:
+    """Langes Drücken wertet das Programm selbst aus (Kachel-Menü) – die Rechtsklick-Nachbildung
+    des Systems für Finger/Stift abschalten, sonst schließt sie das gerade geöffnete Menü."""
+    from PySide6.QtGui import QGuiApplication
+
+    from .bridge.touch import SyntheticRightClickFilter
+    from .system import integration
+
+    win = context.window
+    context.input_filter = SyntheticRightClickFilter(win)
+    win.installEventFilter(context.input_filter)
+    if QGuiApplication.platformName() == "windows" and not integration.disable_press_and_hold(int(win.winId())):
+        log.info("Windows-„Gedrückt halten“ bleibt aktiv – Rechtsklicks von Finger/Stift werden gefiltert.")
 
 
 def _requested_project(args: argparse.Namespace) -> str | None:
@@ -252,9 +274,8 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     instance.messageReceived.connect(ctx.handle_instance_message)
 
-    project = requested or ctx.settings.last_project
-    if project and Path(project).exists():
-        ctx.backend.openProject(project)
+    # zuletzt offene Registerkarten wiederherstellen, ein angefordertes Projekt dazu öffnen
+    ctx.backend.restore_tabs(requested)
 
     rc = ctx.app.exec()
     instance.close()
@@ -395,10 +416,11 @@ def _smoke_audio(ctx: AppContext, folder: Path) -> bool:
     else:
         return False
     backend.triggerTile(1)
+    key = backend.engine_key(1)
     deadline = time.monotonic() + 5
-    while time.monotonic() < deadline and (0, 1) not in backend.engine.snapshot:
+    while time.monotonic() < deadline and key not in backend.engine.snapshot:
         ctx.app.processEvents(QEventLoop.ProcessEventsFlag.AllEvents, 20)
         time.sleep(0.01)
-    playing = (0, 1) in backend.engine.snapshot
+    playing = key in backend.engine.snapshot
     backend.stopAll()
     return playing

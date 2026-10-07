@@ -4,6 +4,55 @@ Alle nennenswerten Änderungen an Launchpad Pro TAB Edition. Der Abschnitt einer
 beim Veröffentlichen automatisch als Versionshinweis ins GitHub-Release übernommen und im
 Update-Dialog des Programms angezeigt.
 
+## [Unveröffentlicht]
+
+### Neu
+
+- **Projekte in Registerkarten:** Mehrere Projekte sind gleichzeitig geöffnet – oben über dem
+  Kachel-Raster lässt sich wie im Browser zwischen ihnen wechseln. Kacheln im Hintergrund spielen
+  weiter (die Karte zeigt dann ▶ und die Anzahl), **ALLES STOPPEN** stoppt alle Karten.
+  „+“ öffnet eine leere Karte mit Startseite; offene Karten werden beim nächsten Start
+  wiederhergestellt. Geschlossen wird über das `×` oder die mittlere Maustaste; am Touchmonitor
+  holt Antippen der Karte das Projekt nach vorne. Tastenkürzel: `Strg+Tab` / `Strg+Umschalt+Tab`,
+  `Strg+T`, `Strg+W`.
+- **Projektauswahl:** Ein Klick auf das Projektfeld (Bereich *Projekt*) öffnet die Liste der
+  zuletzt geöffneten Projekte – offene springen zu ihrer Karte, andere öffnen sich in einer neuen.
+- **Projekte löschen:** Der Papierkorb in der Projektauswahl (und auf der Startseite) verschiebt
+  ein Projekt nach Rückfrage in den Papierkorb des Systems – wiederherstellbar. Ein geöffnetes
+  Projekt wird vorher gespeichert und seine Registerkarte geschlossen. Im Show-Modus gesperrt.
+- **Kacheln verschieben:** Eine Kachel auf eine andere ziehen tauscht die Plätze (auf eine leere
+  verschiebt sie). Laufende Kacheln spielen dabei weiter. Mit der Maus startet ein Klick weiterhin
+  sofort – beginnt man zu ziehen, bricht der gerade gestartete Ton ab. Im Show-Modus gesperrt.
+- **Kachel zum Bearbeiten ziehen:** Eine Kachel lässt sich direkt in den Bereich
+  *Bearbeiten & Schneiden* ziehen, um sie dort zu öffnen. Während des Ziehens ist der Bereich
+  grün umrandet; ein Hinweis warnt, wenn dadurch eine andere offene Bearbeitung verworfen würde.
+  Die bereits geöffnete Kachel bleibt unverändert offen.
+- **Vollbild-Schalter** unter *Einstellungen › Darstellung*. Die Wahl bleibt gespeichert – das
+  Programm startet dann direkt im Vollbild. `F11` schaltet weiterhin um und hält den Schalter
+  aktuell; `--fullscreen` gilt nur für den jeweiligen Start.
+
+### Verbessert
+
+- **Schnelligkeit ändern klingt nicht mehr verzerrt:** Das Tempo wird jetzt mit einem
+  Phase-Vocoder geändert. Das bisherige Verfahren (WSOLA) klang bei Musik mit mehreren Tönen rau
+  und „kratzig“. Akkorde, Klavier und Glocken bleiben jetzt sauber (Störanteil im Test von −9 dB
+  auf −30 bis −44 dB), Schläge und Einsätze bleiben knackig (kein Vorecho, keine doppelten
+  Schläge), das Stereobild bleibt erhalten. Vorschau und gespeicherte Fassung klingen weiterhin
+  gleich. Bereits gespeicherte Bearbeitungen behalten ihren Klang, bis man sie erneut speichert
+  (Kachel bearbeiten → *Speichern*).
+
+### Behoben
+
+- Touchmonitor: Das Kachel-Menü (lange drücken) schloss sich sofort wieder, wenn der Finger etwas
+  länger lag. Windows macht aus „Gedrückt halten“ beim Loslassen einen Rechtsklick, der neben dem
+  Menü landete. Diese Nachbildung ist im Programmfenster jetzt abgeschaltet und wird zusätzlich
+  herausgefiltert; Rechtsklicks mit Maus oder Touchpad funktionieren wie bisher.
+- Klicks auf Farbkreise, Listenzeilen und Farbschema-Karten in Dialogen lösten zusätzlich die
+  Kachel **hinter** dem Dialog aus. Auch Hinweis-Meldungen und die Show-Modus-Leiste lassen keine
+  Klicks mehr an die Kacheln darunter durch; Antippen einer Meldung schließt sie.
+- Heller Modus: Master-Lautstärke und Lautstärke-Fader im Editor haben jetzt eine hellgraue Bahn
+  (vorher schwarz).
+
 ## [1.1.0] – 2026-09-25
 
 ### Neu

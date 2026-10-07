@@ -205,6 +205,16 @@ class ProjectData:
         self.grid = n
         return [t for t in removed if t.has_content]
 
+    def swap(self, a: tuple[int, int], b: tuple[int, int]) -> None:
+        """Tauscht die Kacheln an ``a`` und ``b`` (Drag & Drop); ein leerer Platz wird einfach belegt."""
+        ta, tb = self.tiles.pop(a, None), self.tiles.pop(b, None)
+        if ta is not None:
+            ta.row, ta.col = b
+            self.tiles[b] = ta
+        if tb is not None:
+            tb.row, tb.col = a
+            self.tiles[a] = tb
+
     def assigned_tiles(self) -> Iterable[TileData]:
         return (t for t in self.tiles.values() if not t.is_empty)
 

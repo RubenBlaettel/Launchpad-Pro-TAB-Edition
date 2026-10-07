@@ -3,11 +3,21 @@ import QtQuick.Layouts
 import LaunchpadPro
 
 // Optionen › Bearbeiten & Schneiden.
-// Ausgegraut, bis in der Auswahlliste einer Kachel "Bearbeiten" gewählt wird.
+// Ausgegraut, bis in der Auswahlliste einer Kachel "Bearbeiten" gewählt oder eine Kachel
+// hierher gezogen wird.
 Card {
     id: card
     implicitHeight: col.implicitHeight + 2 * padding
     readonly property bool on: editor.active && !editor.saving && !backend.showMode
+
+    property Item dragProxy: null          // Kachel-Ziehen (DragProxy.qml): Ablegen hier = bearbeiten
+    readonly property bool tileDragging: dragProxy !== null && dragProxy.dragging && dragProxy.isTile
+                                         && !backend.showMode
+    property string dropHint: ""           // Kachel schwebt über dem Bereich
+    property string dropDetail: ""
+    property bool dropOk: false
+    property real dropY: 0                 // Zeigerposition im Bereich (für die Lage des Hinweises)
+    onTileDraggingChanged: if (!tileDragging) dropHint = ""
 
     function timeToX(t) { return (t - editor.viewStart) / Math.max(0.0001, editor.viewEnd - editor.viewStart) * wave.width }
     function xToTime(x) { return editor.viewStart + x / Math.max(1, wave.width) * (editor.viewEnd - editor.viewStart) }
@@ -240,7 +250,7 @@ Card {
                         Text {
                             anchors.horizontalCenter: parent.horizontalCenter
                             horizontalAlignment: Text.AlignHCenter
-                            text: "Kachel lange drücken oder rechtsklicken\n→ „Bearbeiten“ wählen"
+                            text: "Kachel hierher ziehen\noder lange drücken / rechtsklicken → „Bearbeiten“"
                             color: Theme.alpha(Theme.accent, 0.7)
                             font.family: Theme.fontFamily
                             font.pixelSize: Theme.fontSmall
@@ -427,6 +437,103 @@ Card {
                 value: editor.gain
                 label: "LAUTSTÄRKE"
                 onMoved: (v) => editor.setGain(v)
+            }
+        }
+    }
+
+    // ---------------------------------------------- Kachel hierher ziehen = bearbeiten
+    // Solange eine Kachel gezogen wird, zeigt ein Rahmen den Bereich als Ziel; darüber erscheint der Hinweis.
+    Rectangle {
+        id: dropFrame
+        objectName: "editorDropFrame"
+        anchors.fill: parent
+        anchors.margins: -card.padding
+        z: 20
+        visible: card.tileDragging
+        radius: card.radius
+        color: card.dropHint !== "" && card.dropOk ? Theme.alpha(Theme.accent, 0.12) : "transparent"
+        border.width: card.dropHint !== "" ? 3 : 2
+        border.color: card.dropHint === "" ? Theme.alpha(Theme.accent, 0.45)
+                    : card.dropOk ? Theme.accent : Theme.warning
+
+        // Hinweis in der Hälfte, die der Zeiger nicht belegt – über dem Finger schwebt die gezogene Kachel
+        Rectangle {
+            objectName: "editorDropHint"
+            anchors.horizontalCenter: parent.horizontalCenter
+            y: card.dropY > dropFrame.height / 2 ? 14 : dropFrame.height - height - 14
+            visible: card.dropHint !== ""
+            width: Math.min(parent.width - 32, hintRow.implicitWidth + 32)
+            height: hintRow.implicitHeight + 20
+            radius: 10
+            color: Theme.popup
+            border.color: card.dropOk ? Theme.accent : Theme.warning
+            border.width: 2
+            Row {
+                id: hintRow
+                anchors.centerIn: parent
+                spacing: 10
+                Icon {
+                    anchors.verticalCenter: parent.verticalCenter
+                    name: card.dropOk ? "scissors" : "info"
+                    size: 20
+                    color: card.dropOk ? Theme.accent : Theme.warning
+                }
+                Column {
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 2
+                    Text {
+                        text: card.dropHint
+                        color: Theme.text
+                        font.family: Theme.fontFamily
+                        font.pixelSize: Theme.fontBody
+                        font.weight: Font.DemiBold
+                    }
+                    Text {
+                        visible: text !== ""
+                        text: card.dropDetail
+                        color: Theme.textDim
+                        font.family: Theme.fontFamily
+                        font.pixelSize: Theme.fontSmall
+                    }
+                }
+            }
+        }
+    }
+    DropArea {
+        anchors.fill: dropFrame
+        z: 21
+        enabled: !backend.showMode
+        keys: ["application/x-lptab-tile"]
+        function check(drag) {
+            const index = drag.source ? drag.source.tileIndex : -1
+            card.dropOk = false
+            card.dropDetail = ""
+            if (index < 0) {
+                card.dropHint = ""
+            } else if (editor.saving) {
+                card.dropHint = "Bearbeitung wird noch gespeichert …"
+                card.dropDetail = "Bitte einen Moment warten"
+            } else if (editor.editsTile(index)) {
+                card.dropHint = "Wird bereits bearbeitet"
+            } else {
+                card.dropOk = true
+                card.dropHint = (editor.active || editor.loading) ? "Stattdessen diese Kachel bearbeiten"
+                                                                  : "Zum Bearbeiten loslassen"
+                if (editor.active || editor.loading)
+                    card.dropDetail = "Die offene Bearbeitung wird verworfen"
+            }
+            return card.dropOk
+        }
+        // Immer annehmen (sonst kein Verlassen-Ereignis) – ob abgelegt werden darf, entscheidet check()
+        onEntered: (drag) => { card.dropY = drag.y; check(drag); drag.accept(Qt.MoveAction) }
+        onPositionChanged: (drag) => card.dropY = drag.y
+        onExited: card.dropHint = ""
+        onDropped: (drop) => {
+            const ok = check(drop)
+            card.dropHint = ""
+            if (ok) {
+                backend.editTile(drop.source.tileIndex)
+                drop.accept(Qt.MoveAction)
             }
         }
     }

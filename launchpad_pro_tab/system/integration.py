@@ -1,4 +1,5 @@
-"""Windows-Integration: Instanz-Mutex (für den Installer) und Taskleisten-Kennung.
+"""Windows-Integration: Instanz-Mutex (für den Installer), Taskleisten-Kennung und
+„Gedrückt halten“ für Touch/Stift.
 
 Unter anderen Systemen sind die Funktionen wirkungslos.
 """
@@ -44,3 +45,38 @@ def set_app_user_model_id() -> None:
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(APP_USER_MODEL_ID)
     except Exception as exc:  # noqa: BLE001
         log.debug("AppUserModelID nicht gesetzt: %s", exc)
+
+
+# Fenster-Eigenschaft des Windows-Tablet-Dienstes (gilt für Finger und Stift)
+PRESS_AND_HOLD_PROPERTY = "MicrosoftTabletPenServiceProperty"
+TABLET_DISABLE_PRESSANDHOLD = 0x00000001
+
+
+def disable_press_and_hold(hwnd: int) -> bool:
+    """Windows' „Gedrückt halten = Rechtsklick“ für das Programmfenster abschalten.
+
+    Windows zeigt beim langen Drücken einen eigenen Ring und schickt beim Loslassen einen
+    Rechtsklick. Das Programm erkennt „lang drücken“ selbst (Kachel-Menü) – der zusätzliche
+    Rechtsklick landete neben dem gerade geöffneten Menü und schloss es sofort wieder.
+    """
+    if sys.platform != "win32" or not hwnd:
+        return False
+    try:
+        import ctypes
+        from ctypes import wintypes
+
+        # eigene DLL-Objekte: argtypes nicht für andere Nutzer von ctypes.windll verändern
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        user32 = ctypes.WinDLL("user32", use_last_error=True)
+        kernel32.GlobalAddAtomW.argtypes = [wintypes.LPCWSTR]
+        kernel32.GlobalAddAtomW.restype = wintypes.ATOM
+        user32.SetPropW.argtypes = [wintypes.HWND, wintypes.LPCWSTR, wintypes.HANDLE]
+        user32.SetPropW.restype = wintypes.BOOL
+        if not kernel32.GlobalAddAtomW(PRESS_AND_HOLD_PROPERTY):
+            raise OSError(ctypes.get_last_error())
+        if not user32.SetPropW(hwnd, PRESS_AND_HOLD_PROPERTY, TABLET_DISABLE_PRESSANDHOLD):
+            raise OSError(ctypes.get_last_error())
+        return True
+    except Exception as exc:  # noqa: BLE001
+        log.debug("„Gedrückt halten“ nicht abgeschaltet: %s", exc)
+        return False

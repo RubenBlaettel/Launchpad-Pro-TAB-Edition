@@ -24,17 +24,34 @@ sys.path.insert(0, str(ROOT / "tools"))
 OUT = ROOT / "docs" / "images"
 
 
+def simulate_system_volume() -> None:
+    """Master-Lautstärke simulieren: Bilder zeigen keine Geräte des erstellenden Rechners,
+    und dessen echte Systemlautstärke bleibt unberührt."""
+    from launchpad_pro_tab.system import volume as sysvol
+
+    def unavailable(*_args, **_kwargs):
+        raise RuntimeError("für Screenshots simuliert")
+
+    for name in ("WindowsVolume", "MacVolume", "PulseVolume", "WirePlumberVolume", "AlsaVolume"):
+        if hasattr(sysvol, name):
+            setattr(sysvol, name, unavailable)
+
+
 def main() -> int:
     tmp = Path(tempfile.mkdtemp(prefix="lptab-shots-"))
     os.environ["LPTAB_CONFIG_DIR"] = str(tmp / "config")
     os.environ["LPTAB_PROJECTS_DIR"] = str(tmp / "Projekte")
     OUT.mkdir(parents=True, exist_ok=True)
 
-    from PySide6.QtCore import Q_ARG, QEventLoop, QMetaObject, QObject, QPointF, QRect, QTimer
+    from PySide6.QtCore import (Q_ARG, QCoreApplication, QEvent, QEventLoop, QMetaObject, QObject, QPoint, QPointF,
+                                QRect, Qt, QTimer)
+    from PySide6.QtGui import QMouseEvent
+    from PySide6.QtTest import QTest
 
     import demo_assets
     from launchpad_pro_tab.app import create_app
 
+    simulate_system_volume()
     ctx = create_app([sys.argv[0]], no_audio=True)
     app, backend, win = ctx.app, ctx.backend, ctx.window
     editor = backend.editor
@@ -75,6 +92,37 @@ def main() -> int:
         qargs = [Q_ARG("QVariant", a) for a in args]
         QMetaObject.invokeMethod(obj, method, *qargs)
 
+    def center_of(name: str) -> QPoint:
+        """Mitte eines Items im Fenster (auch Repeater-Delegates, die keine QObject-Kinder sind)."""
+        def find(item):
+            if item.objectName() == name:
+                return item
+            for child in item.childItems():
+                hit = find(child)
+                if hit is not None:
+                    return hit
+            return None
+
+        item = find(win.contentItem())
+        p = item.mapToScene(QPointF(item.width() / 2, item.height() / 2))
+        return QPoint(int(p.x()), int(p.y()))
+
+    def fill(tiles: list[tuple]) -> None:
+        """Kacheln der aktiven Registerkarte belegen: (index, datei, farbe, titel, schleife, cover)."""
+        for idx, fname, _color, _title, _loop, _cover in tiles:
+            backend.assignAudio(idx, str(sounds[fname]))
+        wait_until(lambda: backend.runner.pending == 0, 60)
+        wait(300)
+        for idx, _fname, color, title, loop, cover in tiles:
+            backend.setTileColor(idx, color)
+            backend.setTileTitle(idx, title)
+            if loop:
+                backend.setTileLoop(idx, True)
+            if cover:
+                backend.assignCover(idx, str(covers[cover]))
+        wait_until(lambda: backend.runner.pending == 0, 30)
+        wait(500)
+
     wait(800)
     grab("01_start.png")
 
@@ -100,19 +148,7 @@ def main() -> int:
         (16, "Ouvertüre.flac", "#FF4FA3", "Finale", False, None),
     ]
     backend.addRecentFiles([str(p) for p in sounds.values()])
-    for idx, fname, color, title, loop, cover in layout:
-        backend.assignAudio(idx, str(sounds[fname]))
-    wait_until(lambda: backend.runner.pending == 0, 60)
-    wait(300)
-    for idx, fname, color, title, loop, cover in layout:
-        backend.setTileColor(idx, color)
-        backend.setTileTitle(idx, title)
-        if loop:
-            backend.setTileLoop(idx, True)
-        if cover:
-            backend.assignCover(idx, str(covers[cover]))
-    wait_until(lambda: backend.runner.pending == 0, 30)
-    wait(500)
+    fill(layout)
 
     # Bearbeitung vorbereiten (Ouvertüre gekürzt, schneller, lauter) und speichern
     backend.editTile(16)
@@ -123,6 +159,18 @@ def main() -> int:
     editor.setGain(1.25)
     editor.save()
     wait_until(lambda: not editor.active, 30)
+    wait(500)
+
+    # Zweites Projekt in einer eigenen Registerkarte – seine Schleife läuft im Hintergrund weiter
+    backend.newProject("Weihnachtsmärchen", str(tmp / "Projekte"), 4)
+    wait(300)
+    fill([
+        (0, "Kirchenglocke.mp3", "#FFC61A", "Glocken", False, "Glocke"),
+        (1, "Wind.mp3", "#1FD6FF", "Schneesturm", True, None),
+        (5, "Walzer.flac", "#7A5CFF", "Tanz im Schloss", False, "Walzer"),
+    ])
+    backend.triggerTile(1)
+    backend.activateTab(0)
     wait(500)
 
     # Laufende Kacheln + aktiver Editor für die Hauptansicht
@@ -226,6 +274,50 @@ def main() -> int:
     call("settingsDialog", "openPage", 2)
     grab("17_einstellungen_updates.png")
     call("settingsDialog", "close")
+    wait(300)
+
+    # ------------------------------------------------------------------ Projektauswahl & Verschieben
+    call("projectPicker", "open")
+    grab("18_projektauswahl.png")
+    call("projectPicker", "close")
+    wait(300)
+    # Rückfrage „Projekt löschen?“ (nur anzeigen, nicht bestätigen)
+    QMetaObject.invokeMethod(win, "requestDeleteProject", Q_ARG("QVariant", backend.projectPath),
+                             Q_ARG("QVariant", backend.projectName), Q_ARG("QVariant", True), Q_ARG("QVariant", True))
+    grab("21_projekt_loeschen.png")
+    call("deleteProjectDialog", "close")
+    wait(300)
+    # Kachel mit echten Maus-Ereignissen ziehen, Aufnahme mitten im Verschieben
+    start, target = center_of("tile_2"), center_of("tile_8")
+    QTest.mousePress(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, start)
+    for i in range(1, 31):
+        QTest.mouseMove(win, QPoint(start.x() + (target.x() - start.x()) * i // 30,
+                                    start.y() + (target.y() - start.y()) * i // 30))
+        wait(15)
+    grab("19_kachel_verschieben.png", crop="tileGrid", margin=10)
+    QTest.mouseRelease(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, target)
+    wait(300)
+
+    # Kachel auf „Bearbeiten & Schneiden“ ziehen (Editor vorher still geschlossen), Aufnahme vor dem Loslassen
+    editor.close()
+    backend.stopAll()
+    wait(300)
+    start, target = center_of("tile_11"), center_of("editorDropFrame")
+    target = QPoint(target.x(), target.y() - 60)
+    QTest.mousePress(win, Qt.MouseButton.LeftButton, Qt.KeyboardModifier.NoModifier, start)
+    for i in range(1, 41):
+        QTest.mouseMove(win, QPoint(start.x() + (target.x() - start.x()) * i // 40,
+                                    start.y() + (target.y() - start.y()) * i // 40))
+        wait(15)
+    grab("20_kachel_bearbeiten.png")
+    # Loslassen NICHT per QTest: QTest behält die Python-Sperre (GIL) und synchronisiert dabei mit dem
+    # Render-Thread – der muss die frisch geladene Wellenform in Python zeichnen -> Deadlock (nur im
+    # echten Fenster). In die Ereignisschleife gestellt wie ein echtes Maus-Ereignis klappt es.
+    lp = QPointF(target)
+    QCoreApplication.postEvent(win, QMouseEvent(QEvent.Type.MouseButtonRelease, lp, lp, QPointF(win.mapToGlobal(target)),
+                                                Qt.MouseButton.LeftButton, Qt.MouseButton.NoButton,
+                                                Qt.KeyboardModifier.NoModifier))
+    wait_until(lambda: editor.active, 20)
     wait(300)
 
     editor.cancel()

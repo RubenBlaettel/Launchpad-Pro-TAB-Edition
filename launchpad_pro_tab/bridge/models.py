@@ -44,11 +44,13 @@ class TileModel(QAbstractListModel):
         self._runtime: dict[tuple[int, int], TileRuntime] = {}
 
     # ------------------------------------------------------------------
-    def set_project(self, project: ProjectData | None, root: Path | None) -> None:
+    def set_project(self, project: ProjectData | None, root: Path | None,
+                    runtime: dict[tuple[int, int], TileRuntime] | None = None) -> None:
+        """Zeigt ``project`` an; ``runtime`` ist der Laufzeitzustand seiner Registerkarte (geteilt)."""
         self.beginResetModel()
         self._project = project
         self._project_root = root
-        self._runtime = {}
+        self._runtime = runtime if runtime is not None else {}
         self.endResetModel()
         self.countChanged.emit()
 
@@ -186,7 +188,7 @@ class RecentAudioModel(QAbstractListModel):
 
 
 class RecentProjectsModel(QAbstractListModel):
-    ROLE_NAMES = _roles("path", "name", "openedText", "exists", "current")
+    ROLE_NAMES = _roles("path", "name", "openedText", "exists", "current", "open")
     countChanged = Signal()
     count = Property(int, lambda self: self.rowCount(), notify=countChanged)
 
@@ -194,11 +196,14 @@ class RecentProjectsModel(QAbstractListModel):
         super().__init__(parent)
         self._items: list[dict[str, Any]] = []
         self._current = ""
+        self._open: set[str] = set()
 
-    def set_items(self, items: list[dict[str, Any]], current: str = "") -> None:
+    def set_items(self, items: list[dict[str, Any]], current: str = "", open_paths: set[str] | None = None) -> None:
+        """``current`` = Projekt der aktiven Registerkarte, ``open_paths`` = in irgendeiner Karte geöffnet."""
         self.beginResetModel()
         self._items = [dict(i) for i in items]
         self._current = current
+        self._open = set(open_paths or ())
         for item in self._items:
             item["exists"] = Path(item["path"]).exists()
         self.endResetModel()
@@ -226,4 +231,6 @@ class RecentProjectsModel(QAbstractListModel):
             return bool(item.get("exists"))
         if name == "current":
             return item["path"] == self._current
+        if name == "open":
+            return item["path"] in self._open
         return None
