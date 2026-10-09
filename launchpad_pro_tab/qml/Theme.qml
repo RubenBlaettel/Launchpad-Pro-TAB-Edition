@@ -77,7 +77,7 @@ QtObject {
     readonly property color knob: dark ? "#F2F4F7" : "#FFFFFF"
     readonly property color knobBorder: dark ? "#8B93A3" : "#98A1B0"
     readonly property color swatchRing: dark ? "#FFFFFF" : "#141821"
-    readonly property color logoBg: "#191B22"                          // Mini-Launchpad bleibt dunkel
+    readonly property color logoBg: "#191B22"                          // Logo bleibt dunkel
     readonly property color logoBorder: dark ? "#2C3140" : "#191B22"
 
     // Maße

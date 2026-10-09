@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "launchpad-pro-tab"
 dynamic = ["version"]
-description = "Launchpad Pro TAB Edition – touch-optimierte Launchpad-Software (Soundboard) für den Theaterbetrieb"
+description = "TAB Soundboard – touch-optimiertes Soundboard für den Theaterbetrieb"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"

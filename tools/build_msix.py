@@ -4,7 +4,7 @@
     python tools/build_msix.py                                 # erzeugt dist/LaunchpadProTAB-<version>.msix
 
 Das Paket bleibt **unsigniert**: Der Microsoft Store signiert es nach der Zertifizierung mit
-seinem eigenen Zertifikat – damit startet Launchpad Pro auch auf PCs mit der intelligenten
+seinem eigenen Zertifikat – damit startet TAB Soundboard auch auf PCs mit der intelligenten
 App-Steuerung von Windows 11. Zum Testen außerhalb des Stores signiert
 ``tools/test_msix.ps1`` eine Kopie mit einem Test-Zertifikat.
 
@@ -35,11 +35,11 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "tools"))
 
-from launchpad_pro_tab import __version__  # noqa: E402
+from launchpad_pro_tab import __app_name__, __version__  # noqa: E402
 
 TEMPLATE = ROOT / "packaging" / "msix" / "AppxManifest.xml"
 STORE_JSON = ROOT / "packaging" / "msix" / "store.json"
-DESCRIPTION = "Touch-optimiertes Soundboard (Launchpad) für den Theaterbetrieb"
+DESCRIPTION = "Touch-optimiertes Soundboard für den Theaterbetrieb"
 EXE_NAME = "LaunchpadProTAB.exe"
 
 # Nur für Tests außerhalb des Stores (CI-Installation mit Test-Zertifikat)
@@ -89,7 +89,7 @@ def load_identity(path: Path = STORE_JSON, *, allow_test: bool = False) -> dict:
     data = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
     ident = {k: str(data.get(k) or "").strip() for k in
              ("display_name", "identity_name", "publisher", "publisher_display_name", "store_id")}
-    ident["display_name"] = ident["display_name"] or "Launchpad Pro TAB Edition"
+    ident["display_name"] = ident["display_name"] or __app_name__
     ident["test"] = not (ident["identity_name"] and ident["publisher"])
     if ident["test"]:
         if not allow_test:

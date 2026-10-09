@@ -87,12 +87,12 @@ def render_large():
     font.setWeight(QFont.Weight.Bold)
     p.setFont(font)
     p.setPen(QColor("#EEF1F7"))
-    p.drawText(QRectF(0, 262, w, 60), Qt.AlignmentFlag.AlignHCenter, "Launchpad Pro")
+    p.drawText(QRectF(0, 262, w, 60), Qt.AlignmentFlag.AlignHCenter, "TAB")
     font.setPixelSize(22)
     font.setLetterSpacing(QFont.SpacingType.AbsoluteSpacing, 6)
     p.setFont(font)
     p.setPen(QColor("#D64DFF"))
-    p.drawText(QRectF(0, 322, w, 40), Qt.AlignmentFlag.AlignHCenter, "TAB EDITION")
+    p.drawText(QRectF(0, 322, w, 40), Qt.AlignmentFlag.AlignHCenter, "SOUNDBOARD")
 
     # Wellenform (Bild 1) als Akzentlinie
     path = QPainterPath()

@@ -373,7 +373,7 @@ def test_update_notice_and_dialog(ctx):
     pill = _find_item(win.contentItem(), "updatePill")
     assert pill is not None and not pill.isVisible()
 
-    release = Release(parse_version("99.0.0"), "v99.0.0", "Launchpad Pro 99", "## Neu\n\n- Alles besser",
+    release = Release(parse_version("99.0.0"), "v99.0.0", "TAB Soundboard 99", "## Neu\n\n- Alles besser",
                       "https://example.invalid/v99", datetime(2026, 10, 1, tzinfo=timezone.utc), False,
                       [Asset("LaunchpadProTAB-Setup-99.0.0.exe", "https://example.invalid/s.exe", 1000, "0" * 64)])
     updater._kind = InstallKind.WINDOWS_INSTALLER

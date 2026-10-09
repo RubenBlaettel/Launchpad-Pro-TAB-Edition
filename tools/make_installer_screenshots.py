@@ -77,7 +77,7 @@ def main() -> int:
         log = Path(os.environ.get("WINEPREFIX", str(Path.home() / ".wine"))) / "drive_c" / "lptab-screenshots.log"
         log.unlink(missing_ok=True)
         proc = wiz.run("/LOG=C:\\lptab-screenshots.log")
-        w = wiz.window("Launchpad Pro")
+        w = wiz.window("TAB Soundboard")
         wiz.shot(w, "1_willkommen.png"); wiz.key(w, "Return")
         wiz.shot(w, "2_zielordner.png"); wiz.key(w, "Return")
         wiz.shot(w, "3_aufgaben.png"); wiz.key(w, "Return")
@@ -90,7 +90,7 @@ def main() -> int:
 
         # Erneuter Start: Wartungsseite -> Deinstallieren
         proc = wiz.run()
-        w = wiz.window("Launchpad Pro")
+        w = wiz.window("TAB Soundboard")
         wiz.key(w, "Return")
         wiz.shot(w, "6_wartung.png")
         wiz.key(w, "Down")

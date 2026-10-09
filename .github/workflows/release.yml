@@ -86,6 +86,6 @@ jobs:
             gh release upload "v$VERSION" release/* --clobber
             gh release edit "v$VERSION" --notes-file notes.md
           else
-            gh release create "v$VERSION" release/* --title "Launchpad Pro TAB Edition $VERSION" \
+            gh release create "v$VERSION" release/* --title "TAB Soundboard $VERSION" \
               --notes-file notes.md --target "$GITHUB_SHA" $FLAGS
           fi

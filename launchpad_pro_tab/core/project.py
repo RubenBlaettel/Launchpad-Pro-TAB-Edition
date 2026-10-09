@@ -232,7 +232,7 @@ class Project:
             names = zf.namelist()
             project_files = [n for n in names if n.endswith("/" + PROJECT_FILE_NAME) or n == PROJECT_FILE_NAME]
             if not project_files:
-                raise ProjectError("Die ZIP-Datei enthält kein Launchpad-Projekt.")
+                raise ProjectError("Die ZIP-Datei enthält kein Projekt von TAB Soundboard.")
             inner = project_files[0].rsplit("/", 1)[0] if "/" in project_files[0] else ""
             folder_name = inner.split("/")[-1] if inner else zip_path.stem
             target = unique_path(Path(dest_parent) / safe_filename(folder_name))

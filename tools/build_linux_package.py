@@ -20,8 +20,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-README = """Launchpad Pro TAB Edition {version} – Linux
-==========================================
+README = """TAB Soundboard {version} – Linux
+===============================
 
 Installieren (für den aktuellen Benutzer, ohne Administratorrechte):
 

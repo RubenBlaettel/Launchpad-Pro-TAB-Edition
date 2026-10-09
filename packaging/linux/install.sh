@@ -1,6 +1,6 @@
 #!/bin/sh
 # ============================================================================
-#  Launchpad Pro TAB Edition – Installation unter Linux
+#  TAB Soundboard – Installation unter Linux
 # ============================================================================
 #
 #  Aus dem entpackten Paket heraus aufrufen:
@@ -20,7 +20,7 @@
 # ============================================================================
 set -eu
 
-APP_NAME="Launchpad Pro TAB Edition"
+APP_NAME="TAB Soundboard"
 APP_ID="LaunchpadProTAB"            # = QGuiApplication.desktopFileName (Wayland app_id)
 EXE="LaunchpadProTAB"
 ICON_NAME="launchpad-pro-tab"
@@ -120,13 +120,13 @@ write_desktop_file() {  # write_desktop_file ZIEL PROGRAMMORDNER
 Type=Application
 Name=$APP_NAME
 GenericName=Soundboard
-Comment=Touch-optimierte Launchpad-Software für den Theaterbetrieb
+Comment=Touch-optimiertes Soundboard für den Theaterbetrieb
 Exec="$2/$EXE" %f
 TryExec=$2/$EXE
 Icon=$ICON_NAME
 Terminal=false
 Categories=AudioVideo;Audio;Music;
-Keywords=Theater;Soundboard;Launchpad;Audio;Kacheln;
+Keywords=Theater;Soundboard;Bühne;Audio;Kacheln;
 MimeType=$MIME_TYPE;
 StartupWMClass=$APP_ID
 StartupNotify=true
@@ -209,7 +209,8 @@ if [ "$MODE" = "uninstall" ]; then
     # Zwischenspeicher (Update-Downloads, QML-Cache) immer entfernen
     CACHE_HOME="$HOME"
     [ -n "$REAL_USER" ] && CACHE_HOME=$(getent passwd "$REAL_USER" | cut -d: -f6)
-    rm -rf "$CACHE_HOME/.cache/launchpad-pro-tab" "$CACHE_HOME/.cache/TAB Theater/Launchpad Pro TAB Edition"
+    rm -rf "$CACHE_HOME/.cache/launchpad-pro-tab" "$CACHE_HOME/.cache/TAB Theater/TAB Soundboard" \
+        "$CACHE_HOME/.cache/TAB Theater/Launchpad Pro TAB Edition"
     rmdir "$CACHE_HOME/.cache/TAB Theater" 2>/dev/null || true
     refresh_caches
     say "$APP_NAME wurde entfernt."
@@ -235,7 +236,7 @@ fi
 case "$PREFIX" in "~"*) PREFIX="$HOME${PREFIX#\~}" ;; esac
 [ "$WANT_MENU" = 1 ] && { ask "Eintrag im Anwendungsmenü anlegen?" 1 || WANT_MENU=0; }
 [ "$WANT_DESKTOP" = 1 ] && { ask "Verknüpfung auf dem Desktop anlegen?" 1 || WANT_DESKTOP=0; }
-[ "$WANT_MIME" = 1 ] && { ask "Projektdateien (.lptab) per Doppelklick mit Launchpad Pro öffnen?" 1 || WANT_MIME=0; }
+[ "$WANT_MIME" = 1 ] && { ask "Projektdateien (.lptab) per Doppelklick mit TAB Soundboard öffnen?" 1 || WANT_MIME=0; }
 say ""
 ask "Jetzt nach $PREFIX installieren?" 1 || { say "Abgebrochen."; exit 1; }
 
@@ -302,7 +303,7 @@ if [ "$WANT_MIME" = 1 ]; then
 <?xml version="1.0" encoding="UTF-8"?>
 <mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
   <mime-type type="$MIME_TYPE">
-    <comment>Launchpad Pro TAB Projekt</comment>
+    <comment>TAB-Soundboard-Projekt</comment>
     <glob pattern="*.lptab"/>
     <icon name="$ICON_NAME"/>
   </mime-type>

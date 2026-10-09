@@ -11,7 +11,7 @@ import os
 import sys
 from pathlib import Path
 
-from . import __app_id__, __app_name__, __organization__, __version__
+from . import __app_id__, __app_name__, __legacy_app_names__, __organization__, __version__
 from .core.paths import config_dir
 
 PACKAGE_DIR = Path(__file__).resolve().parent
@@ -264,7 +264,7 @@ def main(argv: list[str] | None = None) -> int:
     requested = _requested_project(args)
     instance = SingleInstance()
     if instance.forward({"action": "activate", "project": requested or ""}):
-        log.info("Launchpad Pro läuft bereits – Auftrag an die laufende Instanz übergeben.")
+        log.info("TAB Soundboard läuft bereits – Auftrag an die laufende Instanz übergeben.")
         return 0
     instance.listen()
     integration.create_instance_mutex()
@@ -303,13 +303,15 @@ def purge_user_data(confirmed: bool) -> int:
         from PySide6.QtCore import QCoreApplication, QStandardPaths
 
         QCoreApplication.setOrganizationName(__organization__)
-        QCoreApplication.setApplicationName(__app_name__)
         loc = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.DocumentsLocation)
         documents = Path(loc) if loc else None
-        for kind in (QStandardPaths.StandardLocation.CacheLocation, QStandardPaths.StandardLocation.AppLocalDataLocation):
-            loc = QStandardPaths.writableLocation(kind)
-            if loc:
-                qt_dirs.append(Path(loc))      # z. B. QML-Cache von Qt
+        # Qt-Ordner unter dem aktuellen und den früheren Programmnamen (Umbenennung in 1.2)
+        for name in (__app_name__, *__legacy_app_names__):
+            QCoreApplication.setApplicationName(name)
+            for kind in (QStandardPaths.StandardLocation.CacheLocation, QStandardPaths.StandardLocation.AppLocalDataLocation):
+                loc = QStandardPaths.writableLocation(kind)
+                if loc:
+                    qt_dirs.append(Path(loc))      # z. B. QML-Cache von Qt
     except Exception:  # noqa: BLE001
         pass
     plan = plan_purge(documents=documents, extra_dirs=qt_dirs)

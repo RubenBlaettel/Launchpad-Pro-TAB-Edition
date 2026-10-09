@@ -23,7 +23,7 @@ import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .. import __app_name__
+from .. import __app_name__, __legacy_app_names__
 from .constants import AUDIO_DIR, AUTOSAVE_DIR, CACHE_DIR, COVER_DIR, PROJECT_FILE_NAME, PROJECT_FORMAT
 from .paths import cache_dir, config_dir, default_projects_dir
 from .settings import AppSettings
@@ -32,6 +32,8 @@ log = logging.getLogger(__name__)
 
 # Vom Programm in einem Projektordner angelegte Einträge
 PROJECT_ENTRIES = (PROJECT_FILE_NAME, AUDIO_DIR, COVER_DIR, AUTOSAVE_DIR, CACHE_DIR)
+# Programmnamen, unter denen Qt Ordner anlegt (aktueller + frühere Namen)
+APP_NAMES = (__app_name__, *__legacy_app_names__)
 
 
 @dataclass
@@ -134,7 +136,7 @@ def plan_purge(settings: AppSettings | None = None, documents: Path | None = Non
             projects.append(path)
 
     candidates_data = [cache_dir(), config_dir()]
-    candidates_data += [d for d in (extra_dirs or []) if __app_name__ in str(d)]
+    candidates_data += [d for d in (extra_dirs or []) if any(n in str(d) for n in APP_NAMES)]
     data_dirs = []
     for d in candidates_data:
         d = _resolve(Path(d))
@@ -180,7 +182,7 @@ def execute_purge(plan: PurgePlan) -> PurgeReport:
     for data_dir in plan.data_dirs:
         # Protokolldateien können noch offen sein (Windows) – dann bleiben Reste stehen
         _remove(data_dir, report)
-        if __app_name__ in data_dir.name:
+        if any(n in data_dir.name for n in APP_NAMES):
             try:
                 data_dir.parent.rmdir()          # leerer Herstellerordner („TAB Theater“)
             except OSError:

@@ -64,7 +64,7 @@ STOP_FADE_MS_DEFAULT = 40.0  # kurzes Ausblenden beim Stoppen (gegen Knackser)
 PREVIEW_KEY = "__preview__"
 
 # ---------------------------------------------------------------------------
-# Kachel-Farben (Launchpad-typische Neonfarben)
+# Kachel-Farben (leuchtende Neonfarben wie auf Pad-Controllern)
 # ---------------------------------------------------------------------------
 TILE_COLORS = (
     "#D64DFF",  # Magenta (Standard)

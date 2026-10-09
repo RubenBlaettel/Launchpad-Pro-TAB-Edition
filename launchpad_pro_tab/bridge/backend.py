@@ -152,7 +152,7 @@ class Backend(PropertyObject):
         if previous == __version__:
             return
         if previous and is_newer(__version__, previous):
-            self.notify(f"Launchpad Pro wurde auf Version {__version__} aktualisiert.", "success")
+            self.notify(f"TAB Soundboard wurde auf Version {__version__} aktualisiert.", "success")
         self.settings.last_version = __version__
         self.settings.save()
 
@@ -492,7 +492,7 @@ class Backend(PropertyObject):
         root = root.resolve()
         guard = purge.protected_dirs([self._documents_dir] if self._documents_dir else None)
         if root in guard or root.parent == root or not purge.is_project_dir(root):
-            self.notify(f"„{root}“ ist kein Projektordner von Launchpad Pro – es wird nichts gelöscht.", "error")
+            self.notify(f"„{root}“ ist kein Projektordner von TAB Soundboard – es wird nichts gelöscht.", "error")
             return False
         tab = self._find_tab(root)
         if tab is not None:

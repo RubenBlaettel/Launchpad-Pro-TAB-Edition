@@ -133,7 +133,7 @@ AppDialog {
         id: fileDialog
         title: "Projekt öffnen"
         fileMode: FileDialog.OpenFile
-        nameFilters: ["Launchpad-Projekt (projekt.lptab *.lptab)", "Projekt-Export (*.zip)", "Alle Dateien (*)"]
+        nameFilters: ["TAB-Soundboard-Projekt (projekt.lptab *.lptab)", "Projekt-Export (*.zip)", "Alle Dateien (*)"]
         onAccepted: { if (backend.openProject(selectedFile)) dlg.close() }
     }
 }

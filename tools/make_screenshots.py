@@ -259,7 +259,7 @@ def main() -> int:
         "- Behoben: Coverbild wurde nach dem Umbenennen nicht aktualisiert\n"
     )
     release = Release(
-        version=parse_version(nxt), tag=f"v{nxt}", title=f"Launchpad Pro TAB Edition {nxt}", notes=notes,
+        version=parse_version(nxt), tag=f"v{nxt}", title=f"TAB Soundboard {nxt}", notes=notes,
         html_url=f"https://github.com/RubenBlaettel/Launchpad-Pro-TAB-Edition/releases/tag/v{nxt}",
         published=datetime(2026, 10, 12, 18, 0, tzinfo=timezone.utc), prerelease=False,
         assets=[Asset(f"LaunchpadProTAB-Setup-{nxt}.exe", "https://example.invalid/setup.exe", 118_400_000, "0" * 64)],

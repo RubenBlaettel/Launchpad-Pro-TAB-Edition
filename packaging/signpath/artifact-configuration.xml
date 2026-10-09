@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  SignPath – Artefakt-Konfiguration für Launchpad Pro TAB Edition (Slug: „windows“).
+  SignPath – Artefakt-Konfiguration für TAB Soundboard (Slug: „windows“).
   In SignPath unter Projekt › Artifact Configurations › Add anlegen und diesen Text einfügen.
 
   Der Release-Workflow (.github/workflows/build.yml) schickt zwei ZIP-Artefakte mit flach

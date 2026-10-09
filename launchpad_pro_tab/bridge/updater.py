@@ -247,7 +247,7 @@ class UpdateController(PropertyObject):
         if release is None:
             self._release, self._asset = None, None
             self.releaseChanged.emit()
-            self._set_state("uptodate", f"Launchpad Pro ist auf dem neuesten Stand (Version {__version__}).")
+            self._set_state("uptodate", f"TAB Soundboard ist auf dem neuesten Stand (Version {__version__}).")
             return
         pattern = install.asset_pattern(self._kind)
         self._release = release
@@ -331,7 +331,7 @@ class UpdateController(PropertyObject):
     def _downloaded(self, path: Path) -> None:
         self._poll.stop()
         self._update_progress()
-        self._set_state("installing", "Update wird installiert – Launchpad Pro startet gleich neu …")
+        self._set_state("installing", "Update wird installiert – TAB Soundboard startet gleich neu …")
         QTimer.singleShot(150, lambda: self._install(path))
 
     # ------------------------------------------------------------------
@@ -350,7 +350,7 @@ class UpdateController(PropertyObject):
                                                       ready_file=ready, log_file=package.with_name("installation.log"))
                 proc = install.start_windows_installer(package, args)
                 self._set_state("installing", "Bitte die Windows-Sicherheitsabfrage bestätigen – danach wird "
-                                              "Launchpad Pro beendet, aktualisiert und neu gestartet …")
+                                              "TAB Soundboard beendet, aktualisiert und neu gestartet …")
                 self._installer = (proc, ready, time.monotonic())
                 self._installer_timer.start()
             else:
@@ -384,7 +384,7 @@ class UpdateController(PropertyObject):
             if self.resume_hook is not None:
                 self.resume_hook()
             self._set_state("error", "Das Update wurde nicht installiert – die Windows-Sicherheitsabfrage wurde "
-                                     "abgelehnt oder der Installer konnte nicht starten. Launchpad Pro läuft "
+                                     "abgelehnt oder der Installer konnte nicht starten. TAB Soundboard läuft "
                                      "normal weiter; das Update lässt sich jederzeit erneut starten.")
 
     def _prepare(self) -> None:

@@ -88,3 +88,34 @@ def test_purge_cli_dry_run_and_confirmed(home):
     assert real.returncode == 0, real.stdout + real.stderr
     assert not proj.root.exists()
     assert not (home / ".config" / "launchpad-pro-tab").exists()
+
+
+def test_projects_dir_keeps_folder_of_old_name(tmp_path, monkeypatch):
+    """Umbenennung in „TAB Soundboard“ (1.2): Ein vorhandener Ordner unter dem alten Namen bleibt
+    der Standard (keine Projekte verschieben), neue Installationen bekommen den neuen Namen."""
+    from launchpad_pro_tab.core.paths import APP_DIR_NAME, default_projects_dir
+
+    monkeypatch.delenv("LPTAB_PROJECTS_DIR", raising=False)
+    docs = tmp_path / "Documents"
+    docs.mkdir()
+    assert APP_DIR_NAME == "TAB Soundboard"
+    assert default_projects_dir(docs) == docs / "TAB Soundboard"
+    (docs / "Launchpad Pro TAB").mkdir()
+    assert default_projects_dir(docs) == docs / "Launchpad Pro TAB"
+    (docs / "TAB Soundboard").mkdir()
+    assert default_projects_dir(docs) == docs / "TAB Soundboard"
+
+
+def test_purge_removes_qt_dirs_of_old_and_new_name(home, tmp_path):
+    vendor = tmp_path / "AppData" / "TAB Theater"
+    old, new = vendor / "Launchpad Pro TAB Edition", vendor / "TAB Soundboard"
+    other = tmp_path / "AppData" / "Anderes Programm"
+    for d in (old / "qmlcache", new / "qmlcache", other):
+        d.mkdir(parents=True)
+    plan = purge.plan_purge(documents=home / "Documents", extra_dirs=[old, new, other])
+    assert old.resolve() in plan.data_dirs and new.resolve() in plan.data_dirs
+    assert other.resolve() not in plan.data_dirs                        # fremder Ordner bleibt
+    purge.execute_purge(plan)
+    assert not old.exists() and not new.exists()
+    assert not vendor.exists()                                          # leerer Herstellerordner
+    assert other.exists()

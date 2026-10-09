@@ -1,6 +1,6 @@
 {
   "_hinweis": "Paket-Identität aus Partner Center (App › Produktverwaltung › Produktidentität), siehe docs/MICROSOFT_STORE.md. Leer = nur Testpaket (build_msix.py --test-identity).",
-  "display_name": "Launchpad Pro TAB Edition",
+  "display_name": "TAB Soundboard",
   "identity_name": "FunctionalSoftwareSolutio.LaunchpadProTABEdition",
   "publisher": "CN=55ADF3B1-0564-4D89-8EAA-591123FEF7FD",
   "publisher_display_name": "Functional Software Solutions RB",

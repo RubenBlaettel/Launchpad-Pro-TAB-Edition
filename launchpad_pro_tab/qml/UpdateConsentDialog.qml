@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
 
-// Einmalige Frage beim ersten Start: Darf Launchpad Pro automatisch nach Updates suchen?
+// Einmalige Frage beim ersten Start: Darf TAB Soundboard automatisch nach Updates suchen?
 // Ohne Antwort (Fenster geschlossen) wird beim nächsten Start erneut gefragt.
 AppDialog {
     id: dlg
@@ -16,7 +16,7 @@ AppDialog {
         spacing: 10
         Text {
             Layout.fillWidth: true
-            text: "Launchpad Pro kann beim Start prüfen, ob eine neue Version veröffentlicht wurde, und Sie darauf hinweisen."
+            text: "TAB Soundboard kann beim Start prüfen, ob eine neue Version veröffentlicht wurde, und Sie darauf hinweisen."
             color: Theme.text
             font.family: Theme.fontFamily
             font.pixelSize: Theme.fontLarge

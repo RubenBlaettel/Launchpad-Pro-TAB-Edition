@@ -1,11 +1,14 @@
-# Launchpad Pro TAB Edition
+# TAB Soundboard
 
-**Touch-optimierte Launchpad-Software für den Theaterbetrieb.** Audiodateien werden auf farbige,
+**Touch-optimiertes Soundboard für den Theaterbetrieb.** Audiodateien werden auf farbige,
 frei gestaltbare Kacheln gelegt und per Fingertipp (oder Mausklick) mit sehr geringer Latenz
-abgespielt – wie bei einem Hardware-Launchpad aus der Veranstaltungstechnik. Dazu gibt es eine
+abgespielt – wie mit den Pads eines Hardware-Samplers aus der Veranstaltungstechnik. Dazu gibt es eine
 eingebaute Schnitt-/Bearbeitungsfunktion, Projektverwaltung mit automatischem Speichern, einen
 Master-Fader für die Windows-Systemlautstärke, ein **dunkles und ein helles Design**, einen
 **Windows-Installer** und **automatische Updates** über GitHub.
+
+> Bis Version 1.1 hieß das Programm „Launchpad Pro TAB Edition“. Bestehende Projekte,
+> Einstellungen und Installationsordner werden unverändert weiterverwendet.
 
 ![Hauptansicht](docs/images/02_hauptansicht.png)
 
@@ -73,7 +76,7 @@ Master-Fader für die Windows-Systemlautstärke, ein **dunkles und ein helles De
 Auf vielen Windows-11-PCs ist die **intelligente App-Steuerung** eingeschaltet. Sie startet nur
 Programme, die mit einem vertrauenswürdigen Zertifikat digital signiert sind – den unsignierten
 Installer und das damit installierte Programm blockiert sie (Fehler 4551, „Ein Teil dieser App wurde
-blockiert“). Für diese PCs gibt es Launchpad Pro im **Microsoft Store**: Dort signiert Microsoft
+blockiert“). Für diese PCs gibt es TAB Soundboard im **Microsoft Store**: Dort signiert Microsoft
 das Programm selbst.
 
 > **Stand:** Die Store-Fassung ist in Vorbereitung (Einreichung siehe
@@ -81,12 +84,12 @@ das Programm selbst.
 > Link zur Store-Seite.
 
 - **Installieren:** Store-Seite öffnen → **Installieren** (keine Administratorrechte, kein
-  Microsoft-Konto nötig) – oder in der Eingabeaufforderung `winget install --source msstore "Launchpad Pro TAB Edition"`.
-- **Updates** installiert Windows automatisch über den Store; Launchpad Pro sucht in dieser Fassung
+  Microsoft-Konto nötig) – oder in der Eingabeaufforderung `winget install --source msstore "TAB Soundboard"`.
+- **Updates** installiert Windows automatisch über den Store; TAB Soundboard sucht in dieser Fassung
   nicht selbst nach Updates (*Einstellungen › Updates* zeigt das an).
 - Funktionen, Projekte und Bedienung sind identisch. Das Programm erscheint im Startmenü (eine
   Desktop-Verknüpfung legt der Store nicht an), `.lptab`-Projektdateien öffnen sich per Doppelklick.
-- Projekte liegen wie bei der Installer-Fassung im Ordner *Dokumente › Launchpad Pro TAB* und
+- Projekte liegen wie bei der Installer-Fassung im Ordner *Dokumente › TAB Soundboard* und
   bleiben beim Deinstallieren erhalten.
 
 Ob die App-Steuerung eingeschaltet ist, zeigt *Windows-Sicherheit › App- & Browsersteuerung ›
@@ -102,7 +105,7 @@ Einstellungen für intelligente App-Steuerung*. Ist sie aus, funktioniert auch d
 | Schritt | |
 |---|---|
 | **Willkommen** | ![Willkommen](docs/images/installer/1_willkommen.png) |
-| **Zielordner** – Standard ist `C:\Program Files\Launchpad Pro TAB Edition`; über *Durchsuchen …* lässt sich ein anderer Ordner wählen. | ![Zielordner](docs/images/installer/2_zielordner.png) |
+| **Zielordner** – Standard ist `C:\Program Files\TAB Soundboard`; über *Durchsuchen …* lässt sich ein anderer Ordner wählen. | ![Zielordner](docs/images/installer/2_zielordner.png) |
 | **Zusätzliche Aufgaben** – per Checkbox (alle standardmäßig an): **Desktop-Verknüpfung**, **Eintrag im Startmenü**, **Projektdateien (.lptab) per Doppelklick öffnen**. | ![Aufgaben](docs/images/installer/3_aufgaben.png) |
 | **Bereit** – Zusammenfassung; mit **Installieren** bestätigen. | ![Bereit](docs/images/installer/4_bereit.png) |
 | **Fertig** – optional gleich starten. | ![Fertig](docs/images/installer/5_fertig.png) |
@@ -124,7 +127,7 @@ Für Administratoren (Verteilung auf mehrere Rechner) funktioniert auch eine sti
 
 ```text
 LaunchpadProTAB-Setup-1.1.0.exe /VERYSILENT /SUPPRESSMSGBOXES /NORESTART
-LaunchpadProTAB-Setup-1.1.0.exe /VERYSILENT /DIR="D:\Programme\Launchpad" /TASKS="startmenuicon"
+LaunchpadProTAB-Setup-1.1.0.exe /VERYSILENT /DIR="D:\Programme\TAB Soundboard" /TASKS="startmenuicon"
 ```
 
 Zwischenstände (noch nicht veröffentlicht) gibt es unter *Actions → CI → neuester Lauf → Artifacts*:
@@ -151,11 +154,11 @@ Debian 12, Fedora 36 und neuer). Als `root` installiert das Skript nach `/opt/la
 
 ### Deinstallation
 
-**Windows:** *Einstellungen › Apps › Installierte Apps › Launchpad Pro TAB Edition › Deinstallieren*
+**Windows:** *Einstellungen › Apps › Installierte Apps › TAB Soundboard › Deinstallieren*
 – oder den Installer erneut starten und **Deinstallieren** wählen. Der Deinstaller fragt per
 Checkbox, ob auch **alle Projekte und Einstellungen** gelöscht werden sollen (Standard: **nein** –
 Projekte bleiben z. B. für eine Neuinstallation erhalten). Gelöscht werden dabei nur Projektordner,
-die mit Launchpad Pro angelegt oder geöffnet wurden; eigene Dateien, die dort zusätzlich liegen, und
+die mit TAB Soundboard angelegt oder geöffnet wurden; eigene Dateien, die dort zusätzlich liegen, und
 exportierte ZIP-Dateien bleiben erhalten.
 
 | Installer erneut gestartet | Deinstallation |
@@ -205,14 +208,14 @@ ideal 1920×1080.
 
 ## Updates
 
-Beim **ersten Start** fragt Launchpad Pro einmal, ob es automatisch nach Updates suchen darf – vorher
+Beim **ersten Start** fragt TAB Soundboard einmal, ob es automatisch nach Updates suchen darf – vorher
 baut das Programm keine Verbindung ins Internet auf (siehe [Datenschutz](#datenschutz)). Die Frage
 erscheint nie während einer Vorstellung (Show-Modus); schließt man sie ohne Antwort, kommt sie beim
 nächsten Start wieder.
 
 ![Frage beim ersten Start](docs/images/22_update_frage.png)
 
-Mit Zustimmung prüft Launchpad Pro **beim Start** (und danach alle 12 Stunden) im Hintergrund, ob auf
+Mit Zustimmung prüft TAB Soundboard **beim Start** (und danach alle 12 Stunden) im Hintergrund, ob auf
 GitHub eine neue Version veröffentlicht wurde. Ist eine da, erscheint oben in der Kopfleiste der Knopf
 **Update x.y.z** und kurz ein Hinweis unten – mitten in einer Vorstellung (Show-Modus) nur der Knopf.
 Ohne Internetverbindung passiert einfach nichts.
@@ -224,11 +227,11 @@ Ein Tipp auf den Knopf zeigt, was neu ist:
 ![Update-Dialog](docs/images/16_update_dialog.png)
 
 - **Jetzt aktualisieren:** Das Update wird heruntergeladen (mit Fortschrittsanzeige) und per
-  **SHA-256-Prüfsumme** geprüft. Danach speichert Launchpad Pro das Projekt und Windows fragt nach
+  **SHA-256-Prüfsumme** geprüft. Danach speichert TAB Soundboard das Projekt und Windows fragt nach
   Administratorrechten. Nach der Bestätigung beendet sich das Programm, der Installer aktualisiert es
   im Hintergrund und startet es anschließend mit demselben Projekt neu. Einstellungen,
   Verknüpfungen und Projekte bleiben erhalten. Wird die Sicherheitsabfrage abgelehnt, läuft
-  Launchpad Pro einfach weiter.
+  TAB Soundboard einfach weiter.
   Unter Linux wird der Programmordner ausgetauscht und das Programm neu gestartet.
 - **Später:** Der Knopf oben bleibt als Erinnerung.
 - **Überspringen:** Diese Version wird nicht mehr angeboten (erst die nächste wieder).
@@ -244,7 +247,7 @@ Prüfung ein- oder ausschalten (z. B. auf einem Bühnenrechner ohne Internet) od
 > ohne Anmeldung abrufen können, muss das Repository **öffentlich** sein.
 
 **Microsoft-Store-Fassung:** Hier übernimmt der Store die Updates – automatisch im Hintergrund,
-signiert von Microsoft. Launchpad Pro fragt dann weder nach der Update-Suche noch baut es selbst eine
+signiert von Microsoft. TAB Soundboard fragt dann weder nach der Update-Suche noch baut es selbst eine
 Verbindung ins Internet auf; *Einstellungen › Updates* führt direkt zu *Downloads und Updates* im Store.
 
 ![Einstellungen › Updates in der Store-Fassung](docs/images/23_einstellungen_store.png)
@@ -263,10 +266,10 @@ Verbindung ins Internet auf; *Einstellungen › Updates* führt direkt zu *Downl
 | **Links oben – Zuletzt verwendet** | zuletzt benutzte Audiodateien (Suche, `+` zum Hinzufügen, `×` zum Entfernen) |
 | **Links – Optionen** | **Projekt**, **Bearbeiten & Schneiden**, **Master-Lautstärke** |
 | **Rechts – Registerkarten** | ein Tab je geöffnetem Projekt, `+` für eine neue Karte |
-| **Rechts – Kachel-Raster** | die Launchpad-Kacheln des Projekts der aktiven Registerkarte |
+| **Rechts – Kachel-Raster** | die Kacheln des Projekts der aktiven Registerkarte |
 
 Beim allerersten Start erscheint rechts der Willkommensbildschirm mit **Neues Projekt** und
-**Projekt öffnen**. Ab dann öffnet Launchpad Pro beim Start alle Registerkarten wieder, die beim
+**Projekt öffnen**. Ab dann öffnet TAB Soundboard beim Start alle Registerkarten wieder, die beim
 Beenden offen waren – aktiv ist das zuletzt benutzte Projekt.
 
 Auf kleineren Bildschirmen (z. B. 1366×768) passt nicht alles untereinander – dann lässt sich die
@@ -303,7 +306,7 @@ nur aus der Liste. Gelöscht wird ausschließlich ein Ordner mit einer Projektda
 | **Exportieren** | ganzes Projekt als **ZIP-Datei** (zum Weitergeben, Sichern oder Umziehen auf einen anderen PC) |
 
 Nach der Installation genügt auch ein **Doppelklick auf `projekt.lptab`** im Explorer. Läuft
-Launchpad Pro bereits, öffnet das laufende Programm das Projekt (es startet kein zweites).
+TAB Soundboard bereits, öffnet das laufende Programm das Projekt (es startet kein zweites).
 
 ![Neues Projekt](docs/images/04_neues_projekt.png)
 
@@ -350,7 +353,7 @@ In der Auswahlliste lassen sich außerdem einstellen:
 - **Coverbild** (JPG, PNG, ICO) – wird automatisch kachelfüllend eingepasst. Alternativ ein Bild
   per Drag & Drop auf eine *bereits belegte* Kachel ziehen.
 - **Titel** (ohne Eingabe wird der Dateiname angezeigt)
-- **Farbe** (12 Launchpad-Farben)
+- **Farbe** (12 Neonfarben)
 - **Schleife (Loop)** – die Kachel wiederholt, bis sie erneut angetippt wird
 - **Bearbeiten** – öffnet die Spur im Bereich *Bearbeiten & Schneiden*
 - **Löschen** – Kachel wird wieder unbelegt (unten erscheint kurz **Rückgängig**)
@@ -532,10 +535,14 @@ Sommerstück 2026/
 
 | | Windows | Linux |
 |---|---|---|
-| Neue Projekte (Standard) | `Dokumente\Launchpad Pro TAB\` | `~/Documents/Launchpad Pro TAB/` |
+| Neue Projekte (Standard) ¹ | `Dokumente\TAB Soundboard\` | `~/Documents/TAB Soundboard/` |
 | Einstellungen + Protokoll (`launchpad.log`) | `%APPDATA%\LaunchpadProTAB\` | `~/.config/launchpad-pro-tab/` |
 | Update-Downloads | `%LOCALAPPDATA%\LaunchpadProTAB\updates\` | `~/.cache/launchpad-pro-tab/updates/` |
-| Programm | `C:\Program Files\Launchpad Pro TAB Edition\` | `~/.local/share/launchpad-pro-tab/` |
+| Programm ¹ | `C:\Program Files\TAB Soundboard\` | `~/.local/share/launchpad-pro-tab/` |
+
+¹ Bis Version 1.1 hieß das Programm „Launchpad Pro TAB Edition“. Gibt es schon einen Projektordner
+`Launchpad Pro TAB` bzw. eine Installation in `C:\Program Files\Launchpad Pro TAB Edition`, bleiben
+diese in Gebrauch – nichts wird verschoben.
 
 ---
 
@@ -711,7 +718,7 @@ Weitere Hinweise für die Weiterentwicklung (auch mit Claude Code) stehen in [`C
 
    Ohne git auf dem eigenen Rechner geht das auch auf GitHub: *Releases › Draft a new release* →
    bei *Choose a tag* `v1.2.0` eintippen und *Create new tag on publish* wählen, als *Target* den
-   Zweig mit dem Code auswählen, Titel z. B. „Launchpad Pro TAB Edition 1.2.0“ → *Publish release*.
+   Zweig mit dem Code auswählen, Titel z. B. „TAB Soundboard 1.2.0“ → *Publish release*.
    Der Workflow ergänzt anschließend Installer, Linux-Paket, Prüfsummen und Versionshinweise.
    (Sobald der Workflow im Standardzweig liegt, geht es auch über *Actions › Release › Run workflow*.)
 4. Der Workflow **Release** baut Windows-Installer, Microsoft-Store-Paket und Linux-Paket, testet
@@ -734,7 +741,7 @@ Programm nach dem Update immer wieder dieselbe Version anbieten).
 
 ### Lizenz
 
-Launchpad Pro TAB Edition ist freie Software unter der **MIT-Lizenz** – siehe [`LICENSE`](LICENSE)
+TAB Soundboard ist freie Software unter der **MIT-Lizenz** – siehe [`LICENSE`](LICENSE)
 (© 2026 TAB Theater). Die mitgelieferten Komponenten stehen unter ihren eigenen Lizenzen, siehe
 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md); beide Texte liegen auch im Programmordner. Alle
 Klänge und Bilder in den Screenshots sind synthetisch erzeugt (`tools/demo_assets.py`).
@@ -753,8 +760,9 @@ Klänge und Bilder in den Screenshots sind synthetisch erzeugt (`tools/demo_asse
 
 ### Datenschutz
 
-Launchpad Pro überträgt keine Informationen an andere Rechner oder Dienste, außer Sie verlangen es
-ausdrücklich:
+TAB Soundboard überträgt keine Informationen an andere Rechner oder Dienste, außer Sie verlangen es
+ausdrücklich. Die vollständige Datenschutzerklärung (Deutsch und Englisch) steht in
+[`PRIVACY.md`](PRIVACY.md) – sie ist auch die Datenschutzrichtlinie der Store-Seite.
 
 - **Update-Suche** – nur nach Zustimmung (Frage beim ersten Start, änderbar unter
   *Einstellungen › Updates*) oder per Klick auf *Jetzt nach Updates suchen*. Abgefragt wird die

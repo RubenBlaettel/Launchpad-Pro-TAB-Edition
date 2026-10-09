@@ -22,14 +22,14 @@ Rectangle {
         Column {
             spacing: 0
             Text {
-                text: "Launchpad Pro"
+                text: "TAB"
                 color: Theme.text
                 font.family: Theme.fontFamily
                 font.pixelSize: 19
                 font.weight: Font.Bold
             }
             Text {
-                text: "TAB EDITION"
+                text: "SOUNDBOARD"
                 color: Theme.magenta
                 font.family: Theme.fontFamily
                 font.pixelSize: 11
@@ -54,7 +54,7 @@ Rectangle {
             active: true
             activeColor: Theme.accent
             font.pixelSize: Theme.fontSmall
-            toolTipText: "Eine neue Version von Launchpad Pro ist verfügbar"
+            toolTipText: "Eine neue Version von TAB Soundboard ist verfügbar"
             onClicked: bar.updateRequested()
         }
 

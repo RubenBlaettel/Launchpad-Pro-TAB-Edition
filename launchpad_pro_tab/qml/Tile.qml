@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Effects
 import QtQuick.Shapes
 
-// Eine Launchpad-Kachel.
+// Eine Soundboard-Kachel.
 //  • Linksklick / kurzes Tippen  -> Start/Stopp (Maus: sofort beim Drücken)
 //  • Rechtsklick / lang drücken   -> Auswahlliste (Belegen, Cover, Farbe, Bearbeiten, Löschen)
 //  • Ziehen auf eine andere Kachel -> Plätze tauschen (ein per Maus gerade gestarteter Ton bricht ab)

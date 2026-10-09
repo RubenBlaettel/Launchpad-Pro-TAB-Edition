@@ -242,7 +242,7 @@ class ProjectData:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "ProjectData":
         if data.get("format") not in (None, PROJECT_FORMAT):
-            raise ValueError("Die Datei ist keine Launchpad-Pro-TAB-Projektdatei.")
+            raise ValueError("Die Datei ist keine Projektdatei von TAB Soundboard.")
         version = int(data.get("version", 1))
         if version > PROJECT_FORMAT_VERSION:
             raise ValueError(

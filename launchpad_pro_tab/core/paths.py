@@ -8,7 +8,10 @@ from pathlib import Path
 
 from .. import __app_id__
 
-APP_DIR_NAME = "Launchpad Pro TAB"
+APP_DIR_NAME = "TAB Soundboard"
+# Projektordner unter dem alten Programmnamen (bis 1.1). Ist er schon da, bleibt er der Standard –
+# bestehende Projekte werden nicht verschoben.
+LEGACY_APP_DIR_NAMES = ("Launchpad Pro TAB",)
 
 
 def config_dir() -> Path:
@@ -63,4 +66,10 @@ def default_projects_dir(documents: Path | None = None) -> Path:
     override = os.environ.get("LPTAB_PROJECTS_DIR")
     if override:
         return Path(override)
-    return (documents or default_documents_dir()) / APP_DIR_NAME
+    base = documents or default_documents_dir()
+    current = base / APP_DIR_NAME
+    if not current.exists():
+        for name in LEGACY_APP_DIR_NAMES:
+            if (base / name).is_dir():
+                return base / name
+    return current

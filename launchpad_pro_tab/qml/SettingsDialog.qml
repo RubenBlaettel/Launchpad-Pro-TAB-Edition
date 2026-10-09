@@ -334,7 +334,7 @@ AppDialog {
                     Layout.fillWidth: true
                     wrapMode: Text.Wrap
                     text: updater.storeManaged
-                          ? "Launchpad Pro sucht in dieser Fassung nicht selbst nach Updates und baut keine Verbindung ins Internet auf."
+                          ? "TAB Soundboard sucht in dieser Fassung nicht selbst nach Updates und baut keine Verbindung ins Internet auf."
                           : "Updates werden aus den Releases auf GitHub geladen und vor der Installation per SHA-256-Prüfsumme geprüft."
                     color: Theme.textMute
                     font.family: Theme.fontFamily
@@ -349,7 +349,7 @@ AppDialog {
                 columnSpacing: 18
                 rowSpacing: 10
                 FieldLabel { text: "Version" }
-                Text { text: "Launchpad Pro TAB Edition " + appVersion; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: Theme.fontBody }
+                Text { text: "TAB Soundboard " + appVersion; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: Theme.fontBody }
                 FieldLabel { text: "Installation" }
                 Text { text: dlg.kindText[updater.installKind] || updater.installKind; color: Theme.text; font.family: Theme.fontFamily; font.pixelSize: Theme.fontBody }
                 FieldLabel { text: "Systemlautstärke" }

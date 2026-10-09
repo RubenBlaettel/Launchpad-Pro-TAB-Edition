@@ -17,7 +17,7 @@ Item {
         Logo { size: 92; Layout.alignment: Qt.AlignHCenter }
         Text {
             Layout.alignment: Qt.AlignHCenter
-            text: "Willkommen bei Launchpad Pro"
+            text: "Willkommen bei TAB Soundboard"
             color: Theme.text
             font.family: Theme.fontFamily
             font.pixelSize: 30

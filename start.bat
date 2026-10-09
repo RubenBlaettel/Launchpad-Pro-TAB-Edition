@@ -1,6 +1,6 @@
 @echo off
 rem ------------------------------------------------------------------
-rem  Launchpad Pro TAB Edition - Start unter Windows
+rem  TAB Soundboard - Start unter Windows
 rem  Beim ersten Start wird automatisch eine Python-Umgebung (.venv)
 rem  angelegt und alle Abhaengigkeiten werden installiert.
 rem ------------------------------------------------------------------

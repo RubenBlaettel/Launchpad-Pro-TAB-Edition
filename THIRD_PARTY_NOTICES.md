@@ -1,6 +1,6 @@
 # Drittanbieter-Komponenten
 
-Launchpad Pro TAB Edition selbst steht unter der MIT-Lizenz (siehe `LICENSE`, © 2026 TAB Theater).
+TAB Soundboard selbst steht unter der MIT-Lizenz (siehe `LICENSE`, © 2026 TAB Theater).
 Es verwendet folgende Open-Source-Komponenten. Sie werden über `pip` installiert bzw. im
 Windows-Installer und im Linux-Paket mitgeliefert.
 

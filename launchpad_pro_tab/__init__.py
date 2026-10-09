@@ -1,4 +1,4 @@
-"""Launchpad Pro TAB Edition – touch-optimierte Launchpad-Software für den Theaterbetrieb.
+"""TAB Soundboard – touch-optimiertes Soundboard für den Theaterbetrieb.
 
 Das Paket ist bewusst in Schichten aufgebaut:
 
@@ -12,7 +12,12 @@ Wichtig: Dieses Modul darf kein Qt importieren, weil die Audio-Worker-Prozesse
 (``audio.tasks``) das Paket ebenfalls laden und schlank bleiben sollen.
 """
 
-__app_name__ = "Launchpad Pro TAB Edition"
+__app_name__ = "TAB Soundboard"
+# Name bis Version 1.1 – nur noch zum Wiederfinden alter Programmordner (Qt-Cache, Verknüpfungen).
+# „Launchpad Pro“ ist ein Produkt von Novation; sichtbar darf der Name nirgends mehr auftauchen
+# (Microsoft Store, Richtlinie 10.1.1.1). Technische Kennungen (__app_id__, Paketname,
+# .lptab, Repository) bleiben unverändert.
+__legacy_app_names__ = ("Launchpad Pro TAB Edition",)
 __app_id__ = "LaunchpadProTAB"
 __version__ = "1.2.0"
 __organization__ = "TAB Theater"

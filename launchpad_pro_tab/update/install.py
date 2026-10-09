@@ -5,7 +5,7 @@ Windows (per Installer installiert)
     mit Administratorrechten läuft, legt er die Datei aus ``/LPTABREADY=<datei>`` an – erst
     dann beendet sich das Programm (lehnt jemand die Windows-Sicherheitsabfrage ab, läuft es
     einfach weiter). Der Installer wartet, bis der Prozess beendet ist, ersetzt die
-    Programmdateien und startet Launchpad Pro als normaler Benutzer neu.
+    Programmdateien und startet TAB Soundboard als normaler Benutzer neu.
 
 Windows (portable, ohne Installer)
     Der Installer wird sichtbar gestartet – danach ist das Programm regulär installiert.
@@ -105,15 +105,15 @@ def asset_pattern(kind: InstallKind) -> str | None:
 
 def install_hint(kind: InstallKind) -> str:
     return {
-        InstallKind.WINDOWS_INSTALLER: "Das Update wird heruntergeladen und geprüft. Danach speichert Launchpad Pro das "
+        InstallKind.WINDOWS_INSTALLER: "Das Update wird heruntergeladen und geprüft. Danach speichert TAB Soundboard das "
                                        "Projekt, beendet sich, der Installer aktualisiert das Programm und startet es neu.",
         InstallKind.WINDOWS_PORTABLE: "Diese Programmversion wurde ohne Installer entpackt. Das Update startet den "
-                                      "Installer – danach ist Launchpad Pro regulär installiert (Startmenü, Updates).",
+                                      "Installer – danach ist TAB Soundboard regulär installiert (Startmenü, Updates).",
         InstallKind.MS_STORE: "Diese Fassung stammt aus dem Microsoft Store – Windows hält sie über den Store "
                               "automatisch aktuell.",
         InstallKind.LINUX_BUNDLE: "Das Update wird heruntergeladen und geprüft. Danach wird der Programmordner "
-                                  "ausgetauscht und Launchpad Pro neu gestartet.",
-        InstallKind.SOURCE: "Launchpad Pro läuft aus dem Quellcode. Bitte den neuen Stand von GitHub holen "
+                                  "ausgetauscht und TAB Soundboard neu gestartet.",
+        InstallKind.SOURCE: "TAB Soundboard läuft aus dem Quellcode. Bitte den neuen Stand von GitHub holen "
                             "(z. B. „git pull“) oder den Installer von der Download-Seite verwenden.",
         InstallKind.UNSUPPORTED: "Für dieses System gibt es kein automatisches Update – bitte die Download-Seite öffnen.",
     }[kind]

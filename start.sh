@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Launchpad Pro TAB Edition – Start unter Linux/macOS.
+# TAB Soundboard – Start unter Linux/macOS.
 # Beim ersten Start wird eine Python-Umgebung (.venv) angelegt.
 set -euo pipefail
 cd "$(dirname "$0")"

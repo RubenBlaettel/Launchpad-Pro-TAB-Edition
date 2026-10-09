@@ -1,11 +1,12 @@
-# CLAUDE.md – Langzeitgedächtnis für Launchpad Pro TAB Edition
+# CLAUDE.md – Langzeitgedächtnis für TAB Soundboard (bis 1.1: Launchpad Pro TAB Edition)
 
 Diese Datei ist die Arbeitsgrundlage für Claude (und Menschen), um auf jedem Gerät mit denselben
 Voraussetzungen weiterzuarbeiten. **Bei jeder größeren Änderung aktualisieren.**
 
 ## 1. Worum geht es?
 
-Touch-optimierte Launchpad-/Soundboard-Software für einen **Theaterverein** („TAB“). Kacheln im
+Touch-optimiertes Soundboard für einen **Theaterverein** („TAB“), Name **TAB Soundboard** (bis 1.1
+„Launchpad Pro TAB Edition“ – technische Kennungen heißen weiter so, siehe Invarianten). Kacheln im
 Raster (3×3 … 7×7) werden mit Audiodateien belegt und per Tippen/Klick abgespielt. Zielplattform:
 **Windows 10/11 mit Touchscreen**; läuft auch unter Linux/macOS. Sprache der Oberfläche,
 Kommentare, Doku: **Deutsch**. Aktuelle Version: siehe `launchpad_pro_tab/__init__.py`
@@ -51,6 +52,7 @@ Kommentare, Doku: **Deutsch**. Aktuelle Version: siehe `launchpad_pro_tab/__init
 | Fader im hellen Modus (v1.2) | **Alle** Fader-Bahnen (Master + Lautstärke im Editor) hellgrau – ersetzt „Fader-Bahnen bleiben schwarz“. |
 | Projekte löschen (v1.2) | In der Projektauswahl/Startseite per Papierkorb-Knopf → **in den Papierkorb des Systems** (nicht endgültig), mit Rückfrage. **Offene Projekte**: speichern, Karte schließen, dann löschen. |
 | „Hitboxen hinter Pop-ups“ (v1.2) | Trat bei offenen Dialogen mit Maus **und** Touch auf → Ursache siehe Stolperfallen (TapHandler in Pop-ups). |
+| Store-Zertifizierung abgelehnt (08.10.2026: 10.1.1.1/10.1.1.4 fremder Produktname „Launchpad Pro“ von Novation, 10.5.1 Datenschutz-Link) | Neuer Name **TAB Soundboard** (09.10.2026). Umfang: **alles Sichtbare** (Oberfläche, Fenstertitel, Store-Paket, Installer, Linux-Paket, Doku, Screenshots); **technische Kennungen bleiben** (Python-Paket `launchpad_pro_tab`, `LaunchpadProTAB.exe`/`__app_id__`, Einstellungsordner, `.lptab`/`PROJECT_FORMAT`, Repository-Name, AppIdGuid, Mutex, AppUserModelID, Paket-Identität). Datenschutzrichtlinie = eigene Seite `PRIVACY.md` (DE + EN). Namensreservierung + Wiedereinreichung macht der Nutzer (`docs/MICROSOFT_STORE.md` Abschnitt 8). |
 
 ### Eigene Designentscheidungen (begründet, bei Bedarf mit Nutzer abstimmen)
 
@@ -127,7 +129,9 @@ Kommentare, Doku: **Deutsch**. Aktuelle Version: siehe `launchpad_pro_tab/__init
   Bearbeitungen werden nicht automatisch neu berechnet (erneut speichern genügt).
 - **Hinweis-Meldungen (v1.2)** fangen Klicks ab (sonst löst die Kachel darunter aus); Antippen
   schließt Meldungen ohne Aktion, Meldungen mit „Rückgängig“/„Anzeigen“ bleiben.
-- **Installer (v1.1):** Inno Setup 7, 64-Bit, `C:\Program Files\Launchpad Pro TAB Edition`, drei
+- **Installer (v1.1):** Inno Setup 7, 64-Bit, `C:\Program Files\TAB Soundboard` (Installationen von
+  1.1 behalten beim Update `…\Launchpad Pro TAB Edition`; `[InstallDelete]` entfernt Verknüpfungen mit
+  dem alten Namen `OldAppName`), drei
   Checkboxen (Desktop, Startmenü, Dateizuordnung `.lptab`, alle an), Wartungsseite beim erneuten
   Start („Aktualisieren/Reparieren“ oder „Deinstallieren“), Deinstaller mit Checkbox „Alle Projekte
   und Einstellungen löschen“ (aus) + danach Standard-Bestätigung (lässt sich in Inno nicht abschalten).
@@ -385,9 +389,17 @@ Installer-E2E-Test (prüft Signatur von EXE und `unins000.exe`) → Release.
 - Update-/Installer-Parameter (`/LPTABWAITPID`, `/LPTABREADY`, `/LPTABRESTART`, `/LPTABPURGE`, `--purge-user-data`,
   `--finish-update`, `--wait-pid`) sind Schnittstellen – Änderungen immer an beiden Seiten + Tests.
 - **Datenschutz:** Das Programm baut **ohne ausdrückliche Zustimmung keine Netzverbindung** auf
-  (Update-Suche erst nach „Ja“ bzw. per Knopf; Store-Fassung nie). Die Datenschutzerklärung im
-  README (`#datenschutz`) ist die Datenschutzrichtlinie der Store-Seite – neue Netzfunktionen immer
-  mit Zustimmung + README-Abschnitt „Datenschutz“.
+  (Update-Suche erst nach „Ja“ bzw. per Knopf; Store-Fassung nie). **`PRIVACY.md`** (DE + EN) ist
+  die Datenschutzrichtlinie der Store-Seite (Link `…/blob/main/PRIVACY.md` – nie die Projektseite mit
+  `#datenschutz`, siehe Stolperfallen) – neue Netzfunktionen immer mit Zustimmung + `PRIVACY.md` +
+  README-Abschnitt „Datenschutz“.
+- **Name:** Sichtbar heißt das Programm **TAB Soundboard** – nirgends „Launchpad“ (Marke von
+  Novation; auch nicht in Store-Text, Suchbegriffen, Screenshots, Installer-Bildern). Quelle im Code:
+  `__app_name__` (Qt-Anwendungsname, Fenstertitel über QML). Alte Namen nur zum Wiederfinden alter
+  Ordner: `__legacy_app_names__` (Qt-Cache beim Löschen), `paths.LEGACY_APP_DIR_NAMES` (vorhandener
+  Projektordner `Dokumente\Launchpad Pro TAB` bleibt Standard), `OldAppName` im .iss. Technische
+  Kennungen (siehe Entscheidungen) nicht umbenennen – Updates, Einstellungen und Store-Identität
+  hängen daran.
 - **Store-Paket:** Identität (`identity_name`, `publisher`, `publisher_display_name`) und
   `display_name` in `packaging/msix/store.json` müssen **exakt** Partner Center entsprechen.
   MSIX-Version = `__version__` + `.0` (Store verlangt 0 an vierter Stelle, muss je Übermittlung
@@ -526,7 +538,7 @@ Installer-E2E-Test (prüft Signatur von EXE und `unins000.exe`) → Release.
 - **Intelligente App-Steuerung auf dem Nutzer-PC** (Ereignisanzeige: *Microsoft-Windows-
   CodeIntegrity/Operational*, Ereignis 3077 „did not meet the Enterprise signing level
   requirements“; Status: Registry `…\Control\CI\Policy\VerifiedAndReputablePolicyState`, 1 = an)
-  blockiert nicht nur Launchpad Pro, sondern auch **frisch per pip installierte Binärpakete**:
+  blockiert nicht nur das Programm, sondern auch **frisch per pip installierte Binärpakete**:
   `pip install av==19.0.1` in die `.venv` → „DLL load failed … Eine Anwendungssteuerungsrichtlinie
   hat diese Datei blockiert“. In der Nutzer-`.venv` keine Binärpakete aktualisieren (ggf. sofort
   die alte Version zurückinstallieren, z. B. `av==18.1.0`); neue Bibliotheksversionen in der CI
@@ -546,6 +558,12 @@ Installer-E2E-Test (prüft Signatur von EXE und `unins000.exe`) → Release.
   Klammern in Kommentaren der Vorlage.
 - Python-Skripte per Bash-Heredoc an `python -` mit `\n` in Ersetzungstexten: Escape-Sequenzen
   verwirren sich leicht → solche Änderungen mit dem Edit-Werkzeug machen.
+- **Microsoft-Store-Zertifizierung (08.10.2026) abgelehnt:** (1) 10.1.1.1 – der Produktname enthielt
+  „Launchpad Pro“ (Controller von Novation); (2) 10.1.1.4 – dieselbe Verwechslungsgefahr *in der App*
+  (Kopfleiste, Titel, Kachelname, Store-Text „wie mit einem Hardware-Launchpad“, Suchbegriff
+  „Launchpad“); (3) 10.5.1 – Datenschutz-Link `github.com/…#datenschutz` öffnet die Repo-Startseite
+  mit Dateiliste, der Prüfer sah keine Datenschutzerklärung. Fremde Marken nie in Namen/Texten
+  verwenden; Datenschutz immer als eigene Seite verlinken.
 
 ## 6. Teststrategie
 
@@ -657,6 +675,14 @@ Installer-E2E-Test (prüft Signatur von EXE und `unins000.exe`) → Release.
   Worker-Prozesse) meldet `microsoft-store` + Paketfamilie, Deinstallation sauber; Inno-Installer mit
   App-Steuerungs-Hinweis kompiliert, Installations-/Update-/Deinstallationstest grün; Tests Linux +
   Windows mit PyAV 19 grün. Store-Konto, Namensreservierung und erste Einreichung macht der Nutzer.
+- Umbenennung in **TAB Soundboard** (09.10.2026, lokal Windows 11, nach Store-Ablehnung): 137 Tests
+  grün (3 Linux-Tests übersprungen, neu: Projektordner-Fallback, Qt-Ordner alter + neuer Name),
+  `--smoke-test` grün, `--version` → „TAB Soundboard 1.2.0“, Manifest aus `build_msix.py --no-pack`
+  geprüft (DisplayName/ShortName/Dateityp „TAB Soundboard“), README-Bilder und Installer-Bilder
+  (`wizard-*.png`) unter Windows neu erzeugt und angesehen. **Offen:** `docs/images/installer/*.png`
+  zeigen noch den alten Namen – `make_installer_screenshots.py` braucht Linux + Wine + Xvfb (lokal
+  kein WSL, unsignierter Installer von der App-Steuerung blockiert) → in einer Linux-Sitzung erneuern.
+  Installer-Update von 1.1 (alter Ordner bleibt, alte Verknüpfungen weg) nur über die CI prüfbar.
 - Nicht automatisch prüfbar (auf echter Hardware testen!): tatsächliche Ausgabelatenz mit WASAPI,
   Windows-Systemlautstärke per pycaw auf einem Rechner mit Audiogerät, Touch-Bedienung auf einem
   echten Touchscreen, native Datei-Dialoge, UAC-Abfrage beim Update (CI-Runner hat keine UAC),

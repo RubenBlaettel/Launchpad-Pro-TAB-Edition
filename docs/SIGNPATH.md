@@ -9,11 +9,11 @@
 
 **Warum?** Windows 11 blockiert mit der *intelligenten App-Steuerung* (Smart App Control) jedes
 Programm, das nicht digital signiert ist und das Microsoft noch nicht kennt – beim Installer von
-Launchpad Pro erscheint dann „Fehler 4551: Eine Anwendungssteuerungsrichtlinie hat diese Datei
+TAB Soundboard erscheint dann „Fehler 4551: Eine Anwendungssteuerungsrichtlinie hat diese Datei
 blockiert“. Eine Ausnahme für einzelne Programme gibt es nicht. Mit einer Signatur laufen Installer
 und Programm auf allen PCs ohne Umstellung.
 
-Launchpad Pro nutzt dafür das kostenlose Angebot der **SignPath Foundation** für Open-Source-Projekte.
+TAB Soundboard nutzt dafür das kostenlose Angebot der **SignPath Foundation** für Open-Source-Projekte.
 Der Release-Workflow ist fertig vorbereitet – er signiert automatisch, sobald die Schritte unten
 erledigt sind. Bis dahin werden Releases wie bisher unsigniert veröffentlicht.
 
@@ -29,14 +29,14 @@ Voraussetzungen (alle bereits erfüllt):
 | Öffentliches Repository | https://github.com/RubenBlaettel/Launchpad-Pro-TAB-Edition |
 | Build auf einem vertrauenswürdigen CI-System | GitHub Actions (GitHub-gehostete Runner), `.github/workflows/release.yml` |
 | Code-Signing-Richtlinie mit Rollen | README › [Code-Signatur](../README.md#code-signatur) |
-| Datenschutzerklärung | README › [Datenschutz](../README.md#datenschutz) – das Programm sendet nur nach ausdrücklicher Zustimmung Daten (Update-Suche) |
+| Datenschutzerklärung | [`PRIVACY.md`](../PRIVACY.md) – das Programm sendet nur nach ausdrücklicher Zustimmung Daten (Update-Suche) |
 
 So geht's:
 
 1. Für GitHub und später auch für SignPath die **Zwei-Faktor-Anmeldung** einschalten (wird verlangt).
 2. Auf **signpath.org** den Antrag für Open-Source-Projekte stellen (*Apply*). Vorschlag für die
    Angaben (auf Englisch):
-   - **Project name:** Launchpad Pro TAB Edition
+   - **Project name:** TAB Soundboard
    - **Repository:** `https://github.com/RubenBlaettel/Launchpad-Pro-TAB-Edition`
    - **License:** MIT
    - **Description:** *Touch-optimized soundboard (launchpad) for theater productions: assign audio
@@ -46,7 +46,7 @@ So geht's:
      executable and the bundled open-source libraries without a publisher signature
      (see `THIRD_PARTY_NOTICES.md`)
    - **Code signing policy:** `https://github.com/RubenBlaettel/Launchpad-Pro-TAB-Edition#code-signatur`
-   - **Privacy policy:** `https://github.com/RubenBlaettel/Launchpad-Pro-TAB-Edition#datenschutz`
+   - **Privacy policy:** `https://github.com/RubenBlaettel/Launchpad-Pro-TAB-Edition/blob/main/PRIVACY.md`
    - **Team:** RubenBlaettel (Committer, Reviewer, Approver)
 3. Die Prüfung dauert in der Regel einige Tage; SignPath meldet sich per E-Mail. Fragt SignPath nach
    Änderungen (z. B. an der Richtlinie im README), kann Claude diese direkt umsetzen.

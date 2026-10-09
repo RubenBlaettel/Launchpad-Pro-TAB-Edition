@@ -1,6 +1,6 @@
 """Nur eine laufende Instanz pro Benutzer.
 
-Wird Launchpad Pro ein zweites Mal gestartet (Doppelklick auf das Symbol, eine
+Wird TAB Soundboard ein zweites Mal gestartet (Doppelklick auf das Symbol, eine
 Projektdatei im Explorer …), übergibt die neue Instanz ihren Auftrag an die laufende und
 beendet sich. Die laufende Instanz holt ihr Fenster nach vorne und öffnet ggf. das Projekt.
 So laufen nie zwei Audio-Engines gleichzeitig auf demselben Bühnenrechner.

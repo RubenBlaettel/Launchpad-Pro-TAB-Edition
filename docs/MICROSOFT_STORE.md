@@ -1,10 +1,13 @@
-# Launchpad Pro im Microsoft Store veröffentlichen
+# TAB Soundboard im Microsoft Store veröffentlichen
 
 **Warum?** Windows 11 blockiert mit der *intelligenten App-Steuerung* (Smart App Control) jedes
 Programm, das nicht mit einem vertrauenswürdigen Zertifikat signiert ist. Eine Ausnahme für einzelne
 Programme gibt es nicht, und selbst erstellte Zertifikate erkennt sie nicht an. Ein MSIX-Paket aus dem
-**Microsoft Store** signiert Microsoft selbst – kostenlos. Damit lässt sich Launchpad Pro auf
+**Microsoft Store** signiert Microsoft selbst – kostenlos. Damit lässt sich TAB Soundboard auf
 jedem Windows-PC installieren, und der Store hält es automatisch aktuell.
+
+> **Erste Einreichung abgelehnt (08.10.2026)?** Siehe
+> [Abschnitt 8: Zertifizierung fehlgeschlagen](#8-zertifizierung-fehlgeschlagen--name-und-datenschutz).
 
 Im Repository ist dafür alles vorbereitet:
 
@@ -31,10 +34,13 @@ Was nur du selbst erledigen kannst: Konto anlegen, App-Namen reservieren, Paket 
 ## 2. App-Namen reservieren
 
 1. Partner Center › **Apps und Spiele** › **Neues Produkt** › **MSIX- oder PWA-App**.
-2. Name: **Launchpad Pro TAB Edition** › *Verfügbarkeit prüfen* › *Produktnamen reservieren*.
-   - Ist der Name vergeben, einen anderen wählen (z. B. „Launchpad Pro TAB Edition – Theater-Soundboard“)
-     und ihn genauso in `packaging/msix/store.json` bei `display_name` eintragen – Manifest und
-     Reservierung müssen exakt übereinstimmen.
+2. Name: **TAB Soundboard** › *Verfügbarkeit prüfen* › *Produktnamen reservieren*.
+   - Ist der Name vergeben, einen anderen wählen (z. B. „TAB Theater-Soundboard“) und ihn genauso
+     in `packaging/msix/store.json` bei `display_name` eintragen – Manifest und Reservierung müssen
+     exakt übereinstimmen.
+   - **Keine Namen fremder Produkte** verwenden (auch nicht in Beschreibung oder Suchbegriffen):
+     „Launchpad Pro“ ist ein Controller von Novation – daran ist die erste Einreichung gescheitert
+     (Richtlinien 10.1.1.1 und 10.1.1.4).
 
 ## 3. Paket-Identität übernehmen
 
@@ -82,7 +88,9 @@ Partner Center › die App › **Übermittlung starten**. Die Abschnitte:
 ### Eigenschaften
 
 - **Kategorie:** Musik (alternativ Produktivität).
-- **Datenschutzrichtlinie:** `https://github.com/RubenBlaettel/Launchpad-Pro-TAB-Edition#datenschutz`
+- **Datenschutzrichtlinie:** `https://github.com/RubenBlaettel/Launchpad-Pro-TAB-Edition/blob/main/PRIVACY.md`
+  (eigene Seite, Deutsch + Englisch – **kein** Link auf die Projektseite mit `#datenschutz`: Der
+  Prüfer sieht dort nur die Dateiliste und lehnt ab, Richtlinie 10.5.1)
 - **Website:** `https://github.com/RubenBlaettel/Launchpad-Pro-TAB-Edition`
 - **Supportkontakt:** `https://github.com/RubenBlaettel/Launchpad-Pro-TAB-Edition/issues` oder eine E-Mail-Adresse.
 - **Systemanforderungen** (optional): Touchscreen *empfohlen*, Arbeitsspeicher mind. 4 GB.
@@ -103,10 +111,10 @@ Vorschläge zum Einfügen:
 
 - **Beschreibung:**
 
-  > Launchpad Pro TAB Edition ist ein touch-optimiertes Soundboard für den Theaterbetrieb. Audiodateien
-  > werden auf farbige Kacheln gelegt und per Fingertipp oder Mausklick mit sehr geringer Verzögerung
-  > abgespielt – wie mit einem Hardware-Launchpad. Mehrere Kacheln laufen gleichzeitig, jede auf Wunsch
-  > in Schleife; „ALLES STOPPEN“ beendet alles mit einem Tipp.
+  > TAB Soundboard ist ein touch-optimiertes Soundboard für den Theaterbetrieb. Audiodateien werden
+  > auf farbige Kacheln gelegt und per Fingertipp oder Mausklick mit sehr geringer Verzögerung
+  > abgespielt. Mehrere Kacheln laufen gleichzeitig, jede auf Wunsch in Schleife; „ALLES STOPPEN“
+  > beendet alles mit einem Tipp.
   >
   > Eine eingebaute Schnittfunktion zeigt die Wellenform, setzt Anfang und Ende, ändert die
   > Geschwindigkeit ohne Tonhöhenänderung und passt die Lautstärke an – nicht-destruktiv und
@@ -121,13 +129,13 @@ Vorschläge zum Einfügen:
   Master-Fader für die Windows-Lautstärke · Dunkles und helles Design · Optimiert für Touchscreens
 - **Screenshots** (1920×1080, aus `docs/images/`): `02_hauptansicht.png`, `08_raster.png`,
   `06_bearbeiten.png`, `12_hauptansicht_hell.png`, `09_show_modus.png`, `03_kachelmenue.png`.
-- **Suchbegriffe:** Soundboard, Theater, Launchpad, Bühne, Sound-Effekte, Zuspieler, Touch
+- **Suchbegriffe:** Soundboard, Theater, Bühne, Sound-Effekte, Zuspieler, Touch, Geräusche
 
 ### Übermittlungsoptionen
 
 Bei **eingeschränkte Funktionen** (`runFullTrust`) fragt Partner Center nach einer Begründung:
 
-> Launchpad Pro TAB Edition ist eine klassische Desktop-Anwendung (Python/Qt), die als MSIX-Paket
+> TAB Soundboard ist eine klassische Desktop-Anwendung (Python/Qt), die als MSIX-Paket
 > verteilt wird. runFullTrust ist für jede Win32-Desktop-Anwendung im Paket erforderlich; die App
 > spielt Audio über WASAPI ab, liest vom Nutzer gewählte Audiodateien und speichert Projekte im
 > Dokumente-Ordner.
@@ -154,13 +162,47 @@ Bei **eingeschränkte Funktionen** (`runFullTrust`) fragt Partner Center nach ei
    `CHANGELOG.md`) › **Übermitteln**.
 4. Nach der Zertifizierung installiert Windows das Update auf allen Rechnern automatisch.
 
+## 8. Zertifizierung fehlgeschlagen – Name und Datenschutz
+
+Die erste Einreichung (Submission 1, Bericht vom 08.10.2026) wurde mit drei Punkten abgelehnt:
+
+| Richtlinie | Grund | Behoben durch |
+|---|---|---|
+| 10.1.1.1 Inaccurate Representation | Produktname enthält den Namen eines fremden Produkts („Launchpad Pro“ von Novation) | neuer Name **TAB Soundboard** |
+| 10.1.1.4 Inaccurate Representation | Inhalte der App (Kopfleiste, Titel, Kachelname) verwechselbar mit dem fremden Produkt | Programm, Store-Paket, Installer und Doku umbenannt (ab Version 1.2.0) |
+| 10.5.1 Privacy Policy | Datenschutz-Link zeigte die Projektseite statt einer Datenschutzerklärung | eigene Seite [`PRIVACY.md`](../PRIVACY.md) |
+
+**Was du in Partner Center tun musst** (Reihenfolge einhalten):
+
+1. **Neuen Namen reservieren:** Die App › *Produktverwaltung › App-Namen verwalten* › **TAB
+   Soundboard** › *Verfügbarkeit prüfen* › *Reservieren*. Ist der Name vergeben: einen anderen
+   wählen und Claude Bescheid geben (er muss in `store.json` und das Paket).
+2. **Neues Paket holen:** Erst wenn der Stand mit dem neuen Namen auf GitHub ist und die CI grün
+   war: Artefakt **LaunchpadProTAB-Microsoft-Store** herunterladen (Schritt 4). Das Paket heißt
+   weiterhin `LaunchpadProTAB-1.2.0.msix` – der Dateiname ist nur technisch, maßgeblich ist der
+   Anzeigename im Paket.
+3. **Übermittlung bearbeiten** (die Übermittlung im Entwurf öffnen):
+   - *Pakete:* `LaunchpadProTAB-1.2.0.msix` (alter Name) entfernen, das neue Paket hochladen.
+     Partner Center prüft, ob der Anzeigename **TAB Soundboard** reserviert ist.
+   - *Store-Einträge › Deutsch:* **Produktname** auf *TAB Soundboard* umstellen; Beschreibung,
+     Funktionen und Suchbegriffe durch die Texte aus Schritt 5 ersetzen (kein „Launchpad“ mehr);
+     **alle Screenshots löschen und neu hochladen** – die alten zeigen „Launchpad Pro“ in der
+     Kopfleiste (neue Bilder aus `docs/images/`).
+   - *Eigenschaften:* Datenschutzrichtlinie auf `https://github.com/RubenBlaettel/Launchpad-Pro-TAB-Edition/blob/main/PRIVACY.md` ändern.
+   - *Zusätzliche Testinformationen* (optional, hilft dem Prüfer): „Product renamed from
+     'Launchpad Pro TAB Edition' to 'TAB Soundboard' to avoid confusion with Novation's Launchpad
+     Pro. All in-app texts, the package display name and the store listing were updated. Privacy
+     policy now at https://github.com/RubenBlaettel/Launchpad-Pro-TAB-Edition/blob/main/PRIVACY.md.“
+4. **Erneut zur Zertifizierung übermitteln.**
+5. Nach der Freigabe kann der alte Name unter *App-Namen verwalten* gelöscht werden.
+
 ## Häufige Fragen
 
 - **Muss ich etwas signieren oder ein Zertifikat kaufen?** Nein – das erledigt der Store.
 - **Gibt es den Installer weiterhin?** Ja, für PCs ohne App-Steuerung (z. B. ältere oder
   aktualisierte Windows-Installationen). Er warnt, wenn die App-Steuerung eingeschaltet ist.
 - **Laufen beide Fassungen nebeneinander?** Ja. Sie teilen sich die Projekte (Ordner *Dokumente ›
-  Launchpad Pro TAB*); Einstellungen der Store-Fassung verwaltet Windows in einem eigenen Bereich, der
+  TAB Soundboard*); Einstellungen der Store-Fassung verwaltet Windows in einem eigenen Bereich, der
   beim Deinstallieren gelöscht wird. Projekte bleiben immer erhalten.
 - **Kann ich das Paket vor der Einreichung testen?** Auf einem PC mit eingeschalteter
   App-Steuerung nicht – dort blockiert Windows jedes testweise signierte Paket. Das übernimmt die CI:

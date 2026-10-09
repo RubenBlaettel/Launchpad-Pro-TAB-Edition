@@ -29,7 +29,7 @@ NS = {
     "rescap": "http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities",
 }
 STORE_IDENTITY = {
-    "display_name": "Launchpad Pro TAB Edition",
+    "display_name": "TAB Soundboard",
     "identity_name": "12345RubenBlaettel.LaunchpadProTABEdition",
     "publisher": "CN=A1B2C3D4-E5F6-4711-8899-AABBCCDDEEFF",
     "publisher_display_name": "Ruben & TAB",
@@ -73,7 +73,7 @@ def test_identity_from_partner_center(tmp_path):
 
 
 def test_identity_missing_needs_test_flag(tmp_path):
-    path = _store_json(tmp_path, display_name="Launchpad Pro TAB Edition", identity_name="", publisher="")
+    path = _store_json(tmp_path, display_name="TAB Soundboard", identity_name="", publisher="")
     with pytest.raises(build_msix.BuildError, match="Partner Center"):
         build_msix.load_identity(path)
     ident = build_msix.load_identity(path, allow_test=True)
@@ -98,7 +98,7 @@ def test_manifest(tmp_path):
     assert identity == {"Name": STORE_IDENTITY["identity_name"], "Publisher": STORE_IDENTITY["publisher"],
                         "Version": "1.2.0.0", "ProcessorArchitecture": "x64"}
     assert root.findtext("m:Properties/m:PublisherDisplayName", namespaces=NS) == "Ruben & TAB"   # maskiert
-    assert root.findtext("m:Properties/m:DisplayName", namespaces=NS) == "Launchpad Pro TAB Edition"
+    assert root.findtext("m:Properties/m:DisplayName", namespaces=NS) == "TAB Soundboard"
     app = root.find("m:Applications/m:Application", NS)
     assert app.get("Executable") == build_msix.EXE_NAME and app.get("EntryPoint") == "Windows.FullTrustApplication"
     assert root.find("m:Capabilities/rescap:Capability", NS).get("Name") == "runFullTrust"

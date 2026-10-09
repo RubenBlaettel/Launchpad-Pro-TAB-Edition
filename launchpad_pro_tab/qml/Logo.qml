@@ -1,6 +1,6 @@
 import QtQuick
 
-// Mini-Launchpad als Logo (3×3 leuchtende Pads).
+// Logo: 3×3 leuchtende Pads.
 Item {
     id: logo
     property int size: 36

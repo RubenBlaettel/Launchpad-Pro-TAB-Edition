@@ -64,6 +64,7 @@ must "Installationsdaten übernommen" test -f "$APP/.install-info"
 must "Update-Zwischenordner entfernt" absent "$STAGE"
 
 echo "== Deinstallation inkl. Projekte und Einstellungen"
+# Projektordner unter dem alten Namen (bis 1.1) – das Löschen muss ihn trotzdem finden
 mkdir -p "$HOME/Documents/Launchpad Pro TAB/CI-Projekt/audio"
 printf '{"format": "launchpad-pro-tab", "version": 1}' > "$HOME/Documents/Launchpad Pro TAB/CI-Projekt/projekt.lptab"
 "$APP/uninstall.sh" --purge --yes

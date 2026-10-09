@@ -40,7 +40,7 @@ def main() -> int:
     version = sys.argv[1].lstrip("v")
     text = section((ROOT / "CHANGELOG.md").read_text(encoding="utf-8"), version)
     if not text:
-        text = f"Launchpad Pro TAB Edition {version}"
+        text = f"TAB Soundboard {version}"
     sys.stdout.write(text + "\n" + FOOTER.format(v=version))
     return 0
 

@@ -1,10 +1,19 @@
 # Änderungen
 
-Alle nennenswerten Änderungen an Launchpad Pro TAB Edition. Der Abschnitt einer Version wird
+Alle nennenswerten Änderungen an TAB Soundboard (bis 1.1: „Launchpad Pro TAB Edition“). Der Abschnitt einer Version wird
 beim Veröffentlichen automatisch als Versionshinweis ins GitHub-Release übernommen und im
 Update-Dialog des Programms angezeigt.
 
 ## [Unveröffentlicht]
+
+### Neuer Name: TAB Soundboard
+
+- Das Programm heißt jetzt **TAB Soundboard** (bisher „Launchpad Pro TAB Edition“). „Launchpad
+  Pro“ ist der Name eines Hardware-Controllers von Novation; für den Microsoft Store braucht die
+  App einen eigenen Namen. Projekte, Einstellungen und der Installationsordner bleiben, wo sie
+  sind – neue Installationen legen Projekte unter *Dokumente › TAB Soundboard* an. Verknüpfungen
+  unter dem alten Namen ersetzt der Installer automatisch.
+- Eigene Datenschutzerklärung auf Deutsch und Englisch: `PRIVACY.md`.
 
 ### Neu
 

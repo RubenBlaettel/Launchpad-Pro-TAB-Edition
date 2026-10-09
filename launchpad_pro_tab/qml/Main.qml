@@ -14,7 +14,7 @@ ApplicationWindow {
     // nur beim Start ausgewertet; danach schaltet setFullscreen()
     visibility: (typeof startFullscreen !== "undefined" && startFullscreen) ? Window.FullScreen : Window.Maximized
     color: Theme.bg
-    title: "Launchpad Pro TAB Edition" + (backend.hasProject ? "  –  " + backend.projectName : "")
+    title: "TAB Soundboard" + (backend.hasProject ? "  –  " + backend.projectName : "")
     font.family: Theme.fontFamily
 
     property bool forceQuit: false
@@ -275,7 +275,7 @@ ApplicationWindow {
         // Neue Version: kurzer Hinweis (nicht während einer Vorstellung) + dauerhaft der Knopf oben
         function onUpdateFound(version) {
             if (!backend.showMode)
-                toasts.show("Neue Version " + version + " von Launchpad Pro ist verfügbar.", "info", "update")
+                toasts.show("Neue Version " + version + " von TAB Soundboard ist verfügbar.", "info", "update")
         }
         // Installer/Neustart übernimmt – Projekt ist bereits gespeichert
         function onQuitRequested() { win.forceQuit = true; Qt.quit() }

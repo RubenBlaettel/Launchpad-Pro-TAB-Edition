@@ -1,5 +1,5 @@
 ; ============================================================================
-;  Launchpad Pro TAB Edition – Windows-Installer (Inno Setup 7)
+;  TAB Soundboard – Windows-Installer (Inno Setup 7)
 ; ============================================================================
 ;
 ;  Bauen (nach dem PyInstaller-Build):
@@ -40,7 +40,10 @@
   #define OutputDir AddBackslash(SourcePath) + "..\..\dist"
 #endif
 
-#define AppName "Launchpad Pro TAB Edition"
+#define AppName "TAB Soundboard"
+; Name bis Version 1.1 („Launchpad Pro“ ist ein Produkt von Novation) – alte Verknüpfungen entfernen.
+; Bestehende Installationen bleiben in ihrem bisherigen Ordner (Inno übernimmt ihn beim Update).
+#define OldAppName "Launchpad Pro TAB Edition"
 #define AppExe "LaunchpadProTAB.exe"
 #define AppPublisher "TAB Theater"
 #define AppURL "https://github.com/RubenBlaettel/Launchpad-Pro-TAB-Edition"
@@ -68,7 +71,7 @@ AppPublisherURL={#AppURL}
 AppSupportURL={#AppURL}/issues
 AppUpdatesURL={#AppURL}/releases
 AppCopyright=© {#GetDateTimeString('yyyy', '', '')} {#AppPublisher}
-AppComments=Touch-optimierte Launchpad-Software (Soundboard) für den Theaterbetrieb
+AppComments=Touch-optimiertes Soundboard für den Theaterbetrieb
 VersionInfoVersion={#AppVersionNumeric}
 VersionInfoProductName={#AppName}
 VersionInfoDescription={#AppName} – Installation
@@ -129,7 +132,7 @@ SignedUninstallerDir={#SignedUninstallerDir}
 Name: "german"; MessagesFile: "compiler:Languages\German.isl"
 
 [Messages]
-german.WelcomeLabel2=Dieser Assistent installiert [name/ver] auf Ihrem Computer.%n%nLaunchpad Pro ist die Soundboard-Software für den Theaterbetrieb: Audiodateien auf Kacheln legen und per Tippen abspielen.
+german.WelcomeLabel2=Dieser Assistent installiert [name/ver] auf Ihrem Computer.%n%nTAB Soundboard ist die Soundboard-Software für den Theaterbetrieb: Audiodateien auf Kacheln legen und per Tippen abspielen.
 german.ConfirmUninstall=Soll %1 jetzt von diesem Computer entfernt werden?
 
 [CustomMessages]
@@ -137,18 +140,18 @@ german.GroupShortcuts=Verknüpfungen:
 german.GroupIntegration=Windows-Integration:
 german.TaskDesktop=Desktop-Verknüpfung erstellen
 german.TaskStartMenu=Im Startmenü anzeigen
-german.TaskFileAssoc=Projektdateien (.lptab) per Doppelklick mit Launchpad Pro öffnen
-german.ProjectFileType=Launchpad Pro TAB Projekt
+german.TaskFileAssoc=Projektdateien (.lptab) per Doppelklick mit TAB Soundboard öffnen
+german.ProjectFileType=TAB-Soundboard-Projekt
 german.ShortcutComment=Soundboard für den Theaterbetrieb
-german.MaintenanceTitle=Launchpad Pro ist bereits installiert
+german.MaintenanceTitle=TAB Soundboard ist bereits installiert
 german.MaintenanceSubtitle=Was möchten Sie tun?
 german.MaintenanceText=Auf diesem Computer ist bereits Version %1 installiert.
 german.MaintenanceUpdate=Aktualisieren bzw. reparieren (Version %1 installieren)
-german.MaintenanceUninstall=Launchpad Pro deinstallieren
+german.MaintenanceUninstall=TAB Soundboard deinstallieren
 german.UninstallTitle=%1 deinstallieren
 german.UninstallIntro=%1 wird von diesem Computer entfernt.%n%nIhre Projekte (Kacheln, Audiodateien, Coverbilder) und Einstellungen bleiben dabei normalerweise erhalten – zum Beispiel für eine spätere Neuinstallation.
 german.UninstallPurge=Alle Projekte und Einstellungen ebenfalls löschen
-german.UninstallPurgeDetail=Löscht alle Projektordner, die mit Launchpad Pro angelegt oder geöffnet wurden – samt der darin gespeicherten Audiodateien und Coverbilder – sowie alle Einstellungen. Exportierte ZIP-Dateien bleiben erhalten. Das Löschen kann nicht rückgängig gemacht werden.
+german.UninstallPurgeDetail=Löscht alle Projektordner, die mit TAB Soundboard angelegt oder geöffnet wurden – samt der darin gespeicherten Audiodateien und Coverbilder – sowie alle Einstellungen. Exportierte ZIP-Dateien bleiben erhalten. Das Löschen kann nicht rückgängig gemacht werden.
 german.ButtonContinue=&Weiter
 german.ButtonCancel=Abbrechen
 
@@ -163,6 +166,9 @@ Type: filesandordirs; Name: "{app}\_internal"
 ; Abgewählte Verknüpfungen bei einer erneuten Installation entfernen
 Type: files; Name: "{autodesktop}\{#AppName}.lnk"; Tasks: not desktopicon
 Type: files; Name: "{autoprograms}\{#AppName}.lnk"; Tasks: not startmenuicon
+; Verknüpfungen unter dem alten Namen (Update von Version 1.1)
+Type: files; Name: "{autodesktop}\{#OldAppName}.lnk"
+Type: files; Name: "{autoprograms}\{#OldAppName}.lnk"
 
 [Files]
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
@@ -186,7 +192,7 @@ Root: HKA; Subkey: "Software\Classes\{#ProgId}\shell\open\command"; ValueType: s
 Root: HKA; Subkey: "Software\Classes\{#ProgId}"; ValueType: none; Flags: deletekey; Tasks: not fileassoc
 
 [Run]
-; Nach der normalen Installation: Checkbox „Launchpad Pro starten“
+; Nach der normalen Installation: Checkbox „TAB Soundboard starten“
 Filename: "{app}\{#AppExe}"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags: nowait postinstall skipifsilent
 ; Nach einem automatischen Update: als normaler Benutzer (nicht als Administrator) neu starten
 Filename: "{app}\{#AppExe}"; Flags: nowait runasoriginaluser; Check: RestartAfterUpdate
@@ -217,7 +223,7 @@ begin
 end;
 
 { Intelligente App-Steuerung (Windows 11): blockiert die unsignierte Programmdatei –
-  Launchpad Pro würde nach der Installation nicht starten. }
+  TAB Soundboard würde nach der Installation nicht starten. }
 function SmartAppControlActive(): Boolean;
 var
   State: Cardinal;
@@ -234,9 +240,9 @@ begin
   Log('Intelligente App-Steuerung ist eingeschaltet.');
   Result := TaskDialogMsgBox('Intelligente App-Steuerung ist eingeschaltet',
     'Windows blockiert auf diesem PC Programme ohne digitale Signatur. Diese Fassung von ' +
-    'Launchpad Pro ist nicht signiert und würde nach der Installation nicht starten.' + #13#10#13#10 +
+    'TAB Soundboard ist nicht signiert und würde nach der Installation nicht starten.' + #13#10#13#10 +
 #ifdef StoreId
-    'Installieren Sie Launchpad Pro deshalb aus dem Microsoft Store – dort ist es von Microsoft ' +
+    'Installieren Sie TAB Soundboard deshalb aus dem Microsoft Store – dort ist es von Microsoft ' +
     'signiert und wird automatisch aktualisiert.',
     mbError, MB_YESNO, ['Microsoft Store öffnen', 'Trotzdem installieren'], 0) = IDNO;
 #else
@@ -248,7 +254,7 @@ begin
     ShellExecAsOriginalUser('open', '{#StoreUrl}', '', '', SW_SHOWNORMAL, ewNoWait, ErrorCode);
 end;
 
-{ Beim Update aus dem Programm heraus: warten, bis Launchpad Pro beendet ist.
+{ Beim Update aus dem Programm heraus: warten, bis TAB Soundboard beendet ist.
   Muss vor der AppMutex-Prüfung passieren – die folgt direkt nach InitializeSetup. }
 function InitializeSetup(): Boolean;
 var
@@ -271,12 +277,12 @@ begin
   Pid := StrToIntDef(ExpandConstant('{param:LPTABWAITPID|0}'), 0);
   if Pid > 0 then
   begin
-    Log(Format('Warte auf das Beenden von Launchpad Pro (Prozess %d) ...', [Pid]));
+    Log(Format('Warte auf das Beenden von TAB Soundboard (Prozess %d) ...', [Pid]));
     Handle := OpenProcess(SYNCHRONIZE, 0, Pid);
     if Handle <> 0 then
     begin
       if WaitForSingleObject(Handle, 60000) = WAIT_TIMEOUT then
-        Log('Launchpad Pro wurde nach 60 s noch nicht beendet.');
+        Log('TAB Soundboard wurde nach 60 s noch nicht beendet.');
       CloseHandle(Handle);
     end;
   end;

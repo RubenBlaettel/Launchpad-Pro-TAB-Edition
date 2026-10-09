@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Prüft den Windows-Installer von Launchpad Pro TAB Edition von vorne bis hinten.
+  Prüft den Windows-Installer von TAB Soundboard von vorne bis hinten.
 
 .DESCRIPTION
   Wird im CI (GitHub Actions, Windows) ausgeführt – kann aber auch auf einem Test-PC mit
@@ -18,7 +18,7 @@
 param([Parameter(Mandatory = $true)][string]$Setup)
 
 $ErrorActionPreference = "Stop"
-$AppName = "Launchpad Pro TAB Edition"
+$AppName = "TAB Soundboard"
 $AppDir = Join-Path $env:ProgramFiles $AppName
 $Exe = Join-Path $AppDir "LaunchpadProTAB.exe"
 $UninstallKey = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\{623A59DC-8E1B-496A-A80C-66ADADD7D898}_is1"
@@ -120,7 +120,7 @@ Start-Sleep -Seconds 3
 
 Write-Host "== 4. Deinstallation inkl. Projekte und Einstellungen"
 $cfg = Join-Path $env:APPDATA "LaunchpadProTAB"
-$projRoot = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "Launchpad Pro TAB"
+$projRoot = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "TAB Soundboard"
 $proj = Join-Path $projRoot "CI-Projekt"
 New-Item -ItemType Directory -Force -Path (Join-Path $proj "audio") | Out-Null
 Set-Content -Path (Join-Path $proj "projekt.lptab") -Encoding UTF8 -Value '{"format": "launchpad-pro-tab", "version": 1}'
